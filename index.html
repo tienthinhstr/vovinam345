@@ -37,7 +37,7 @@
 <body>
 
     <div id="desktop-ui">
-        <div class="header-title">THE 7TH WVVF WORLD VOVINAM CHAMPIONSHIPS 2023</div>
+        <div class="header-title">HO CHI MINH CITY CADRE ACADEMY</div>
         
         <div class="flex justify-between px-10 mt-4 text-xl font-bold">
             <div>Match: 21</div>
@@ -203,7 +203,6 @@
             }
         }
 
-        // PHÍM TẮT BÀN PHÍM CẬP NHẬT
         document.addEventListener('keydown', (e) => {
             if (e.key.startsWith('F')) e.preventDefault();
             const isCtrl = e.ctrlKey;
@@ -213,8 +212,8 @@
             if (e.key === 'F2') updateScore('red', 1);
             if (e.key === 'F3') updateScore('red', -1);
             if (e.key === 'F4') updateScore('blue', 1);
-            if (e.key === 'F5') updateScore('blue', -1); // F5 TRỪ ĐIỂM XANH
-            if (e.key === 'F6') resetEverything();      // F6 RESET TẤT CẢ
+            if (e.key === 'F5') updateScore('blue', -1);
+            if (e.key === 'F6') resetEverything();
 
             const team = isCtrl ? 'blue' : 'red';
             if (key === 'R') addFoul(team, 'remind');
