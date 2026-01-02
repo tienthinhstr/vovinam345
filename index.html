@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảng Điểm Vovinam - Full HD 16:9</title>
+    <title>Bảng Điểm Vovinam - KẾT NỐI MẠNG CỤC BỘ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Firebase Imports for Real-time Data -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Expose Firebase modules globally
+        window.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot };
+    </script>
     <style>
         /* Custom styles for 16:9 aspect ratio and dark background */
         body {
@@ -16,40 +25,48 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 10px; /* Giảm padding tổng thể */
+            padding: 10px;
             margin: 0;
-            overflow: auto; /* Cho phép cuộn nếu màn hình quá nhỏ */
+            overflow: auto;
+        }
+
+        /* Animations for real-time updates */
+        @keyframes pulse-once {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pulse-once {
+            animation: pulse-once 0.3s ease-out;
         }
 
         .scoreboard-wrapper {
-            /* Vận dụng kỹ thuật 16:9 aspect ratio */
             width: 100%;
-            max-width: 100vh * (16 / 9); /* Giới hạn chiều ngang dựa trên chiều cao 16:9 */
-            aspect-ratio: 16 / 9; /* Giữ tỷ lệ 16:9 */
-            min-height: 500px; /* Chiều cao tối thiểu */
-            max-height: 90vh; /* Chiều cao tối đa */
+            max-width: 100vh * (16 / 9);
+            aspect-ratio: 16 / 9;
+            min-height: 500px;
+            max-height: 90vh;
         }
 
         .scoreboard-container {
             width: 100%;
             height: 100%;
-            border: 4px solid #ff0000; /* Red border effect */
+            border: 4px solid #ff0000;
             box-shadow: 0 0 40px rgba(255, 0, 0, 0.5);
             background-color: #000000;
-            padding: 2% 4%; /* Padding tương đối */
+            padding: 2% 4%;
             box-sizing: border-box;
         }
 
-        /* Responsive Font Sizes based on container size */
         .large-score {
-            font-size: 15vw; /* Tăng cỡ chữ lớn, sẽ thu nhỏ theo màn hình */
+            font-size: 15vw;
             line-height: 1;
             font-weight: 900;
             text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
         }
         @media (min-width: 1200px) {
              .large-score {
-                font-size: 12rem; /* Giữ kích thước lớn trên desktop */
+                font-size: 12rem;
             }
         }
         @media (max-width: 768px) {
@@ -66,13 +83,11 @@
 
         .score-red {
             background-color: #cc0000;
-            cursor: pointer;
             transition: background-color 0.1s;
         }
 
         .score-blue {
             background-color: #0000cc;
-            cursor: pointer;
             transition: background-color 0.1s;
         }
 
@@ -96,61 +111,80 @@
             border: 3px solid white;
             z-index: 10;
         }
+        /* Modal for Link Sharing */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+        }
+
+        .modal-content {
+            background-color: #1f2937;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>
-
     <div class="scoreboard-wrapper">
-
         <div class="scoreboard-container rounded-lg">
+            <!-- Match Info -->
             <div class="flex flex-col items-center mb-4 space-y-1">
                 <div class="flex justify-between w-full text-lg font-semibold px-4 md:px-8">
-                    <span class="text-gray-300">Match: <span id="match-number">21</span></span>
+                    <span class="text-gray-300">Match: <span id="match-number">N/A</span></span>
                     <span class="text-gray-300">Final</span>
-                    <span class="text-gray-300"><span id="category">72kg Male</span></span>
+                    <span class="text-gray-300"><span id="category">N/A</span></span>
                 </div>
             </div>
 
+            <!-- Scores and Timer -->
             <div class="flex relative flex-grow h-auto">
-                
                 <div class="w-1/12 text-left pr-2 hidden sm:block">
-                    <div id="rf-list-red" class="space-y-1 text-sm md:text-base font-mono mt-4">
-                        </div>
+                    <div id="rf-list-red" class="space-y-1 text-sm md:text-base font-mono mt-4"></div>
                 </div>
 
                 <div class="flex-grow flex relative">
-                    <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black transition-all duration-300 hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('red')">
-                        <span id="red-score" class="large-score">1</span>
+                    <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black pt-10 pb-10">
+                        <span id="red-score" class="large-score">0</span>
                     </div>
                     
-                    <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black transition-all duration-300 hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('blue')">
-                        <span id="blue-score" class="large-score">5</span>
+                    <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black pt-10 pb-10">
+                        <span id="blue-score" class="large-score">0</span>
                     </div>
 
                     <div class="absolute left-1/2 transform -translate-x-1/2 -top-10 z-20">
                         <div class="timer-box rounded-lg px-6 py-2 text-center shadow-lg">
-                            <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">Half-time</p>
-                            <p id="timer-display" class="timer-text">00:54</p>
+                            <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">Connecting...</p>
+                            <p id="timer-display" class="timer-text">00:00</p>
                         </div>
                     </div>
-
                     <div id="break-time-message" class="break-time-overlay hidden">Break Time</div>
                 </div>
 
                 <div class="w-1/12 text-right pl-2 hidden sm:block">
-                    <div id="rf-list-blue" class="space-y-1 text-sm md:text-base font-mono mt-4">
-                        </div>
+                    <div id="rf-list-blue" class="space-y-1 text-sm md:text-base font-mono mt-4"></div>
                 </div>
-
             </div>
 
+            <!-- Fouls and Control Buttons -->
             <div class="flex justify-between items-end mt-4 px-2 md:px-8">
                 <div class="text-left text-sm md:text-base space-y-1">
                     <p>Remind: <span id="red-remind" class="text-yellow-400 font-bold">0</span></p>
                     <p>Warned: <span id="red-warned" class="text-yellow-400 font-bold">0</span></p>
                     <p>Medical: <span id="red-medical" class="text-yellow-400 font-bold">0</span></p>
                 </div>
-
+                
                 <div class="flex-grow flex justify-center space-x-16 text-sm md:text-base font-bold">
                     <p id="red-boutsRd" class="text-gray-400">0 bouts/Rd</p>
                     <p id="blue-boutsRd" class="text-gray-400">0 bouts/Rd</p>
@@ -162,23 +196,23 @@
                     <p>Medical: <span id="blue-medical" class="text-yellow-400 font-bold">0</span></p>
                 </div>
 
-                <button id="the-end-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-all">
-                    THE END
-                </button>
+                <!-- Local Control Buttons -->
+                <div class="absolute right-0 bottom-0 mr-4 md:mr-8 flex space-x-2">
+                    <button id="edit-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-all">EDIT</button>
+                    <button id="reset-all-btn" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition-all">RESET ALL</button>
+                    <button id="the-end-btn" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-all">THE END</button>
+                </div>
                 
-                <button id="reset-all-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 -translate-x-32 bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition-all">
-                    RESET ALL
-                </button>
+                <div class="absolute left-0 bottom-0 ml-4 md:ml-8 flex space-x-2">
+                    <button id="share-link-btn" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-all">SHARE CONTROLLER LINK</button>
+                </div>
 
-                <button id="edit-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 -translate-x-64 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-all">
-                    EDIT
-                </button>
-                
                 <div class="absolute right-0 bottom-0 mr-4 md:mr-8 mt-16 text-xs text-red-500 italic tracking-widest">
                     <p>Match SKT</p>
                 </div>
             </div>
 
+            <!-- Keyboard Shortcuts (Kept for reference, logic updated to use state) -->
             <div class="mt-4 pt-4 border-t border-gray-700 flex flex-col items-center text-xs md:text-sm text-gray-400">
                 <p class="font-bold text-lg mb-2 text-yellow-400">PHÍM TẮT ĐIỀU KHIỂN (KEYBOARD SHORTCUTS)</p>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-1 text-left">
@@ -202,39 +236,67 @@
             </div>
         </div>
     </div>
+    
+    <!-- Link Sharing Modal -->
+    <div id="linkModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Chia sẻ liên kết điều khiển (Controller Link)</h2>
+            <p class="mb-4 text-sm text-gray-400">Vui lòng sao chép liên kết dưới đây và mở bằng trình duyệt trên điện thoại của bạn. (Cả hai thiết bị phải có Internet/WiFi).</p>
+            <textarea id="controller-url" class="w-full h-24 p-2 bg-gray-700 text-white rounded-md text-sm mb-4" readonly>Loading URL...</textarea>
+            <div class="flex justify-end space-x-2">
+                <button id="copy-url-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-all">Sao chép & Đóng</button>
+            </div>
+        </div>
+    </div>
 
-    <script>
-        // State management
-        let state = {
-            score: {
-                red: 1,
-                blue: 5
-            },
-            timer: 54, // Start at 54s as seen in the first image
+    <script type="module">
+        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot } = window.firebase;
+
+        // State and Constants
+        const DURATION_SECONDS = 90; 
+        const REMIND_LIMIT = 3; 
+        const $ = (id) => document.getElementById(id);
+        
+        let currentScoreboardState = null; 
+        let localTimerInterval = null; 
+
+        // Firebase Vars
+        const isCanvasEnvironment = typeof __app_id !== 'undefined' && typeof __firebase_config !== 'undefined';
+        const appId = isCanvasEnvironment ? __app_id : 'default-app-id';
+        const firebaseConfig = isCanvasEnvironment ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = isCanvasEnvironment ? __initial_auth_token : null;
+        let db, auth, scoreboardRef;
+        
+        const DEFAULT_STATE = {
+            score: { red: 0, blue: 0 },
+            timer: DURATION_SECONDS,
             isRunning: false,
-            interval: null,
-            status: "Half-time", // "Half-time" or "Break Time"
-            
-            // New state for Fouls
+            status: "WAITING FOR CONTROLLER",
             fouls: {
                 red: { remind: 0, warned: 0, medical: 0 },
                 blue: { remind: 0, warned: 0, medical: 0 }
             },
-            
-            // Additional Match Info (Dùng để EDIT)
-            matchNumber: 21,
-            category: "72kg Male"
+            matchNumber: 1,
+            category: "Men 72kg",
         };
 
-        const DURATION_SECONDS = 90; // Default match time 1:30
-        const REMIND_LIMIT = 3; // 3 Reminds = 1 Warned
+        // --- Core Functions ---
 
-        const $ = (id) => document.getElementById(id);
+        /**
+         * Saves the new state to Firestore.
+         */
+        async function saveStateToFirestore(newState) {
+            if (scoreboardRef) {
+                try {
+                    await setDoc(scoreboardRef, newState);
+                } catch (error) {
+                    console.error("Error writing document to Firestore: ", error);
+                }
+            }
+        }
 
         /**
          * Converts total seconds to MM:SS format.
-         * @param {number} totalSeconds
-         * @returns {string}
          */
         function formatTime(totalSeconds) {
             const minutes = Math.floor(totalSeconds / 60);
@@ -243,21 +305,26 @@
         }
 
         /**
-         * Renders the current state to the DOM.
+         * Renders the current state (from Firestore) to the DOM.
          */
         function render() {
+            if (!currentScoreboardState) return;
+            const state = currentScoreboardState;
+
             // Scores
             $('red-score').textContent = state.score.red;
             $('blue-score').textContent = state.score.blue;
 
-            // Timer
+            // Timer & Status
             $('timer-display').textContent = formatTime(state.timer);
+            const isBreak = state.status === "Break Time";
+            $('break-time-message').classList.toggle('hidden', !isBreak);
+            $('match-status').textContent = state.status;
             
             // Fouls/Warnings
             $('red-remind').textContent = state.fouls.red.remind;
             $('red-warned').textContent = state.fouls.red.warned;
             $('red-medical').textContent = state.fouls.red.medical;
-            
             $('blue-remind').textContent = state.fouls.blue.remind;
             $('blue-warned').textContent = state.fouls.blue.warned;
             $('blue-medical').textContent = state.fouls.blue.medical;
@@ -266,255 +333,303 @@
             $('match-number').textContent = state.matchNumber;
             $('category').textContent = state.category;
 
-            // RF Lists (Render once, static in this demo)
+            // RF Lists (Static content, render once)
             const renderRFList = (containerId, items, isRight) => {
                 const container = $(containerId);
-                // Only render if empty to avoid re-rendering static content
                 if (container.children.length === 0) {
                     container.innerHTML = items.map((item, index) => {
                         const style = `text-white ${isRight ? 'text-right' : 'text-left'}`;
-                        // The opacity-50 is for the small number next to the main RF number
                         return `<p class="${style}">RF ${item} <span class="opacity-50">${index + 1}</span></p>`;
                     }).join('');
                 }
             };
-            // Static RF data for the look
             const rfItems = [1, 2, 3, 4, 5];
             renderRFList('rf-list-red', rfItems, false);
             renderRFList('rf-list-blue', rfItems, true);
+        }
+        
+        // --- Timer Functions (Local Control) ---
 
-            // Match status
-            const isBreak = state.status === "Break Time";
-            $('break-time-message').classList.toggle('hidden', !isBreak);
+        function startLocalTimer() {
+            if (localTimerInterval) return;
             
-            if (state.timer === 0) {
-                $('match-status').textContent = "MATCH ENDED";
-            } else if (isBreak) {
-                $('match-status').textContent = "Break Time";
-            } else if (!state.isRunning) {
-                $('match-status').textContent = "PAUSED";
-            } else {
-                $('match-status').textContent = "Half-time";
+            localTimerInterval = setInterval(() => {
+                if (currentScoreboardState && currentScoreboardState.timer > 0 && currentScoreboardState.isRunning) {
+                    currentScoreboardState.timer--;
+                    render();
+                    if (currentScoreboardState.timer === 0) {
+                        clearInterval(localTimerInterval);
+                        localTimerInterval = null;
+                        currentScoreboardState.isRunning = false;
+                        currentScoreboardState.status = "MATCH ENDED";
+                        saveStateToFirestore(currentScoreboardState); // Sync final state
+                    }
+                } else if (currentScoreboardState && !currentScoreboardState.isRunning) {
+                    stopLocalTimer();
+                }
+            }, 1000);
+        }
+
+        function stopLocalTimer() {
+             if (localTimerInterval) {
+                clearInterval(localTimerInterval);
+                localTimerInterval = null;
             }
         }
 
         /**
-         * Toggles the timer (Start/Pause).
+         * Toggles the timer and syncs to Firestore.
          */
         function toggleTimer() {
-            if (state.isRunning) {
-                // Pause
-                clearInterval(state.interval);
-                state.isRunning = false;
-            } else {
-                // Start
-                if (state.timer > 0) {
-                    state.isRunning = true;
-                    state.interval = setInterval(() => {
-                        if (state.timer > 0) {
-                            state.timer--;
-                            render();
-                        } else {
-                            clearInterval(state.interval);
-                            state.isRunning = false;
-                            state.status = "MATCH ENDED";
-                            render();
-                        }
-                    }, 1000);
-                } else {
-                    state.status = "MATCH ENDED";
-                }
-            }
-            render();
+            if (!currentScoreboardState) return;
+
+            const newState = { ...currentScoreboardState };
+            newState.isRunning = !currentScoreboardState.isRunning;
+            newState.status = newState.isRunning ? "Half-time" : (newState.timer > 0 ? "PAUSED" : "MATCH ENDED");
+
+            stopLocalTimer(); // Clear local interval first
+
+            if (newState.isRunning) {
+                startLocalTimer(); // Start new local interval
+            } 
+            
+            saveStateToFirestore(newState);
         }
 
         /**
-         * Resets the timer to the default duration.
+         * Resets the timer and syncs to Firestore.
          */
         function resetTimer() {
-            clearInterval(state.interval);
-            state.isRunning = false;
-            state.timer = DURATION_SECONDS;
-            state.status = "Half-time";
-            render();
+            if (!currentScoreboardState) return;
+            stopLocalTimer();
+            const newState = { ...currentScoreboardState, isRunning: false, timer: DURATION_SECONDS, status: "Half-time" };
+            saveStateToFirestore(newState);
         }
 
         /**
-         * Toggles the match status between Half-time and Break Time.
+         * Toggles the match status between Half-time and Break Time and syncs to Firestore.
          */
         function toggleStatus() {
-            if (state.status === "Half-time" || state.status === "MATCH ENDED" || state.status === "PAUSED") {
-                state.status = "Break Time";
-                clearInterval(state.interval); // Pause timer on break
-                state.isRunning = false;
+            if (!currentScoreboardState) return;
+            const newState = { ...currentScoreboardState };
+            
+            if (newState.status === "Break Time") {
+                newState.status = "Half-time";
             } else {
-                state.status = "Half-time";
+                newState.status = "Break Time";
+                newState.isRunning = false; // Pause timer on break
+                stopLocalTimer();
             }
-            render();
+            saveStateToFirestore(newState);
         }
+        
+        // Local state changes (for keyboard) will call saveStateToFirestore which will trigger a remote update.
 
-        /**
-         * Increases the score for the specified team.
-         * @param {'red' | 'blue'} team
-         */
         function increaseScore(team) {
-            state.score[team]++;
-            // Flash effect on score block
+            if (!currentScoreboardState) return;
+            const newState = { ...currentScoreboardState };
+            newState.score[team]++;
+            saveStateToFirestore(newState);
+            
             const block = $(`${team}-score-block`);
-            block.classList.add('animate-pulse');
-            setTimeout(() => block.classList.remove('animate-pulse'), 300);
-            render();
+            block.classList.remove('animate-pulse-once'); 
+            void block.offsetWidth; 
+            block.classList.add('animate-pulse-once');
         }
-
-        /**
-         * Decreases the score for the specified team (min 0).
-         * @param {'red' | 'blue'} team
-         */
         function decreaseScore(team) {
-            if (state.score[team] > 0) {
-                state.score[team]--;
-                render();
-            }
+            if (!currentScoreboardState || currentScoreboardState.score[team] <= 0) return;
+            const newState = { ...currentScoreboardState };
+            newState.score[team]--;
+            saveStateToFirestore(newState);
         }
-
-        /**
-         * Updates foul/warning/medical status based on user input.
-         * Implements the logic: 3 Reminds -> 1 Warned, reset Remind.
-         * @param {'red' | 'blue'} team
-         * @param {'remind' | 'warned' | 'medical'} type
-         */
         function updateFoul(team, type) {
+             if (!currentScoreboardState) return;
+            const newState = { ...currentScoreboardState };
+            
             if (type === 'remind') {
-                state.fouls[team].remind++;
-                if (state.fouls[team].remind >= REMIND_LIMIT) {
-                    state.fouls[team].warned++;
-                    state.fouls[team].remind = 0;
+                newState.fouls[team].remind++;
+                if (newState.fouls[team].remind >= REMIND_LIMIT) {
+                    newState.fouls[team].warned++;
+                    newState.fouls[team].remind = 0;
                 }
             } else if (type === 'warned') {
-                state.fouls[team].warned++;
+                newState.fouls[team].warned++;
             } else if (type === 'medical') {
-                state.fouls[team].medical++;
+                newState.fouls[team].medical++;
             }
-            render();
+            saveStateToFirestore(newState);
         }
         
         /**
-         * Resets ALL state variables to their initial/default values (score, timer, fouls).
+         * Resets ALL state variables.
          */
         function resetAll() {
-            if (confirm("Bạn có chắc chắn muốn ĐẶT LẠI TẤT CẢ trạng thái (điểm, thời gian, lỗi phạt) không?")) {
-                clearInterval(state.interval);
-                state.score = { red: 0, blue: 0 };
-                state.timer = DURATION_SECONDS; // Reset to 1:30
-                state.isRunning = false;
-                state.status = "Half-time";
-                state.fouls = {
-                    red: { remind: 0, warned: 0, medical: 0 },
-                    blue: { remind: 0, warned: 0, medical: 0 }
-                };
-                render();
-            }
+             if (window.confirm("Bạn có chắc chắn muốn ĐẶT LẠI TẤT CẢ trạng thái (điểm, thời gian, lỗi phạt) không?")) {
+                stopLocalTimer();
+                saveStateToFirestore(DEFAULT_STATE);
+             }
         }
         
         /**
-         * Allows user to edit match information (match number, category).
+         * Allows user to edit match information.
          */
         function editMatchInfo() {
-             const newMatchNumber = prompt("Nhập Số Trận (Match Number):", state.matchNumber);
-             if (newMatchNumber !== null && newMatchNumber.trim() !== "") {
-                 state.matchNumber = newMatchNumber;
-             }
+             if (!currentScoreboardState) return;
              
-             const newCategory = prompt("Nhập Hạng Cân/Nội Dung (Category):", state.category);
-             if (newCategory !== null && newCategory.trim() !== "") {
-                 state.category = newCategory;
+             const newMatchNumber = window.prompt("Nhập Số Trận (Match Number):", currentScoreboardState.matchNumber);
+             const newCategory = window.prompt("Nhập Hạng Cân/Nội Dung (Category):", currentScoreboardState.category);
+
+             if (newMatchNumber !== null || newCategory !== null) {
+                 const newState = { ...currentScoreboardState };
+                 if (newMatchNumber !== null && newMatchNumber.trim() !== "") {
+                     newState.matchNumber = newMatchNumber;
+                 }
+                 if (newCategory !== null && newCategory.trim() !== "") {
+                     newState.category = newCategory;
+                 }
+                 saveStateToFirestore(newState);
              }
-             render();
         }
 
+        // --- Utility Functions ---
 
-        // --- KEYBOARD SHORTCUT IMPLEMENTATION ---
-        document.addEventListener('keydown', (event) => {
-            // Prevent default browser behavior for F-keys and key shortcuts
-            if (event.key.startsWith('F') || event.ctrlKey) {
-                 event.preventDefault();
-            }
+        function openShareModal() {
+            const controllerUrl = new URL(window.location.href);
+            controllerUrl.searchParams.set('file', 'vovinam_controller.html'); // Ensure it points to the controller file
+            
+            $('controller-url').value = controllerUrl.href;
+            $('linkModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            $('linkModal').style.display = 'none';
+        }
 
-            // Ignore input/textarea fields
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        function copyUrlAndClose() {
+            const urlElement = $('controller-url');
+            urlElement.select();
+            document.execCommand('copy');
+            closeModal();
+        }
+
+        // --- Firebase Setup ---
+
+        async function setupFirebaseAndListener() {
+            if (!isCanvasEnvironment) {
+                $('match-status').textContent = "LỖI: Vui lòng mở trong Canvas để đồng bộ.";
                 return;
             }
 
-            // Determine team based on Control key status
-            const team = event.ctrlKey ? 'blue' : 'red';
-            
-            // Check for F-keys first (Scores and Timer)
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await new Promise(resolve => {
+                    onAuthStateChanged(auth, async (user) => {
+                        if (!user && initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else if (!user) {
+                            await signInAnonymously(auth);
+                        }
+                        resolve();
+                    });
+                });
+
+                scoreboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'vovinam_state', 'current_match');
+                
+                const docSnap = await getDoc(scoreboardRef);
+                if (!docSnap.exists()) {
+                    await setDoc(scoreboardRef, DEFAULT_STATE);
+                    currentScoreboardState = DEFAULT_STATE;
+                }
+
+                onSnapshot(scoreboardRef, (doc) => {
+                    if (doc.exists()) {
+                        const newState = doc.data();
+                        
+                        // Check if running status changed remotely
+                        if (currentScoreboardState && newState.isRunning !== currentScoreboardState.isRunning) {
+                            if (newState.isRunning) {
+                                startLocalTimer();
+                            } else {
+                                stopLocalTimer();
+                            }
+                        }
+                        
+                        currentScoreboardState = newState;
+                        render();
+                        
+                        if (currentScoreboardState.status === "WAITING FOR CONTROLLER") {
+                            $('match-status').textContent = "WAITING FOR CONTROLLER";
+                        } else if (currentScoreboardState.status !== "MATCH ENDED") {
+                             $('match-status').textContent = currentScoreboardState.isRunning ? "Half-time" : "PAUSED";
+                        }
+                        
+                    } else {
+                         currentScoreboardState = DEFAULT_STATE;
+                         saveStateToFirestore(DEFAULT_STATE);
+                         render();
+                    }
+                }, (error) => {
+                    console.error("Firestore onSnapshot error:", error);
+                    $('match-status').textContent = "LỖI: Đồng bộ Realtime thất bại";
+                });
+                
+            } catch (error) {
+                console.error("FATAL: Firebase setup failed.", error);
+                $('match-status').textContent = "LỖI: Khởi tạo Firebase thất bại!";
+            }
+        }
+
+        // --- Event Listeners ---
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key.startsWith('F') || event.ctrlKey) { event.preventDefault(); }
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') { return; }
+
             switch(event.key) {
-                case 'F1':
-                    toggleTimer();
-                    break;
-                case 'F2':
-                    resetTimer();
-                    break;
-                case 'F3':
-                    toggleStatus();
-                    break;
-                case 'F4': // + Red Score
-                    increaseScore('red');
-                    break;
-                case 'F5': // - Red Score
-                    decreaseScore('red');
-                    break;
-                case 'F6': // + Blue Score
-                    increaseScore('blue');
-                    break;
-                case 'F7': // - Blue Score
-                    decreaseScore('blue');
-                    break;
-                case 'F10': // NEW: Reset All
-                    resetAll();
-                    break;
+                case 'F1': toggleTimer(); break;
+                case 'F2': resetTimer(); break;
+                case 'F3': toggleStatus(); break;
+                case 'F4': increaseScore('red'); break;
+                case 'F5': decreaseScore('red'); break;
+                case 'F6': increaseScore('blue'); break;
+                case 'F7': decreaseScore('blue'); break;
+                case 'F10': resetAll(); break;
             }
 
-            // Check for R, W, M keys (Fouls/Remind/Medical)
-            if (!event.ctrlKey) { // Red Team (No Control Key)
+            if (!event.ctrlKey) { 
                 switch(event.key.toUpperCase()) {
-                    case 'R':
-                        updateFoul('red', 'remind');
-                        break;
-                    case 'W':
-                        updateFoul('red', 'warned');
-                        break;
-                    case 'M':
-                        updateFoul('red', 'medical');
-                        break;
+                    case 'R': updateFoul('red', 'remind'); break;
+                    case 'W': updateFoul('red', 'warned'); break;
+                    case 'M': updateFoul('red', 'medical'); break;
                 }
-            } else { // Blue Team (With Control Key)
+            } else { 
                 switch(event.key.toUpperCase()) {
-                    case 'R':
-                        updateFoul('blue', 'remind');
-                        break;
-                    case 'W':
-                        updateFoul('blue', 'warned');
-                        break;
-                    case 'M':
-                        updateFoul('blue', 'medical');
-                        break;
+                    case 'R': updateFoul('blue', 'remind'); break;
+                    case 'W': updateFoul('blue', 'warned'); break;
+                    case 'M': updateFoul('blue', 'medical'); break;
                 }
             }
         });
 
-
-        // Initial setup on load
         window.onload = () => {
-            // Gán sự kiện cho các nút mới
+            setupFirebaseAndListener();
             $('reset-all-btn').addEventListener('click', resetAll);
             $('edit-btn').addEventListener('click', editMatchInfo);
-            
-            // Render ban đầu để hiển thị trạng thái
-            render();
+            $('the-end-btn').addEventListener('click', () => {
+                if (!currentScoreboardState) return;
+                const newState = { ...currentScoreboardState, isRunning: false, status: "MATCH ENDED" };
+                stopLocalTimer();
+                saveStateToFirestore(newState);
+            });
+            $('share-link-btn').addEventListener('click', openShareModal);
+            $('copy-url-btn').addEventListener('click', copyUrlAndClose);
+            $('linkModal').addEventListener('click', (e) => {
+                 if (e.target.id === 'linkModal') closeModal();
+            });
         };
-
     </script>
 </body>
 </html>
