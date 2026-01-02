@@ -7,89 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #0d0d0d;
-            font-family: 'Inter', sans-serif;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 10px;
-            margin: 0;
-            overflow: auto;
-        }
-
-        .scoreboard-wrapper {
-            width: 100%;
-            max-width: 100vh * (16 / 9);
-            aspect-ratio: 16 / 9;
-            min-height: 500px;
-            max-height: 90vh;
-        }
-
-        .scoreboard-container {
-            width: 100%;
-            height: 100%;
-            border: 4px solid #ff0000;
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.5);
-            background-color: #000000;
-            padding: 2% 4%;
-            box-sizing: border-box;
-            position: relative;
-        }
-
-        .large-score {
-            font-size: 15vw;
-            line-height: 1;
-            font-weight: 900;
-            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
-        }
+        body { background-color: #0d0d0d; font-family: 'Inter', sans-serif; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; margin: 0; overflow: auto; }
+        .scoreboard-wrapper { width: 100%; max-width: 1400px; aspect-ratio: 16 / 9; min-height: 500px; }
+        .scoreboard-container { width: 100%; height: 100%; border: 4px solid #ff0000; box-shadow: 0 0 40px rgba(255, 0, 0, 0.5); background-color: #000000; padding: 2% 4%; position: relative; }
+        .large-score { font-size: 15vw; line-height: 1; font-weight: 900; text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5); }
         @media (min-width: 1200px) { .large-score { font-size: 12rem; } }
-        @media (max-width: 768px) { .large-score { font-size: 8rem; } }
-
-        .timer-text {
-            font-size: 3.5rem;
-            font-weight: 700;
-            letter-spacing: -2px;
-        }
-
+        .timer-text { font-size: 3.5rem; font-weight: 700; letter-spacing: -2px; }
         .score-red { background-color: #cc0000; cursor: pointer; }
         .score-blue { background-color: #0000cc; cursor: pointer; }
-
-        .timer-box {
-            background-color: #222;
-            border: 2px solid #555;
-            min-width: 200px;
-        }
-
-        .break-time-overlay {
-            background-color: #333;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 3px solid white;
-            z-index: 10;
-        }
-
-        .status-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.75rem;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 8px;
-            border-radius: 99px;
-        }
+        .timer-box { background-color: #222; border: 2px solid #555; min-width: 200px; }
+        .status-indicator { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 99px; }
         .indicator-dot { width: 8px; height: 8px; border-radius: 50%; }
         .online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
         .offline { background-color: #ef4444; }
@@ -102,43 +29,31 @@
             
             <div class="status-indicator">
                 <div id="conn-dot" class="indicator-dot offline"></div>
-                <span id="conn-text">Connecting...</span>
+                <span id="conn-text">Đang kết nối Cloud...</span>
             </div>
 
             <div class="flex flex-col items-center mb-4 space-y-1">
                 <div class="flex justify-between w-full text-lg font-semibold px-4 md:px-8">
-                    <span class="text-gray-300">Trận: <span id="match-number">0</span></span>
-                    <span class="text-gray-300">Chung Kết</span>
-                    <span class="text-gray-300"><span id="category">Nội Dung</span></span>
+                    <span class="text-gray-300">Trận: <span id="match-number">1</span></span>
+                    <span class="text-gray-300">CHUNG KẾT</span>
+                    <span id="category" class="text-gray-300">NỘI DUNG THI ĐẤU</span>
                 </div>
             </div>
 
-            <div class="flex relative flex-grow h-auto">
-                <div class="w-1/12 text-left pr-2 hidden sm:block">
-                    <div id="rf-list-red" class="space-y-1 text-sm md:text-base font-mono mt-4"></div>
+            <div class="flex relative flex-grow">
+                <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black transition-all pt-10 pb-10" onclick="updateScore('red', 1)">
+                    <span id="red-score" class="large-score">0</span>
+                </div>
+                
+                <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black transition-all pt-10 pb-10" onclick="updateScore('blue', 1)">
+                    <span id="blue-score" class="large-score">0</span>
                 </div>
 
-                <div class="flex-grow flex relative">
-                    <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black transition-all hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('red')">
-                        <span id="red-score" class="large-score">0</span>
+                <div class="absolute left-1/2 transform -translate-x-1/2 -top-10 z-20">
+                    <div class="timer-box rounded-lg px-6 py-2 text-center shadow-lg" onclick="toggleTimer()" style="cursor:pointer">
+                        <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">PAUSED</p>
+                        <p id="timer-display" class="timer-text">01:30</p>
                     </div>
-                    
-                    <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black transition-all hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('blue')">
-                        <span id="blue-score" class="large-score">0</span>
-                    </div>
-
-                    <div class="absolute left-1/2 transform -translate-x-1/2 -top-10 z-20">
-                        <div class="timer-box rounded-lg px-6 py-2 text-center shadow-lg">
-                            <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">PAUSED</p>
-                            <p id="timer-display" class="timer-text">01:30</p>
-                        </div>
-                    </div>
-
-                    <div id="break-time-message" class="break-time-overlay hidden">NGHỈ GIỮA HIỆP</div>
-                </div>
-
-                <div class="w-1/12 text-right pl-2 hidden sm:block">
-                    <div id="rf-list-blue" class="space-y-1 text-sm md:text-base font-mono mt-4"></div>
                 </div>
             </div>
 
@@ -149,9 +64,9 @@
                     <p>Y tế: <span id="red-medical" class="text-yellow-400 font-bold">0</span></p>
                 </div>
 
-                <div class="flex-grow flex justify-center space-x-16 text-sm md:text-base font-bold">
-                    <p id="red-boutsRd" class="text-gray-400">0 bouts/Rd</p>
-                    <p id="blue-boutsRd" class="text-gray-400">0 bouts/Rd</p>
+                <div class="flex flex-col gap-2">
+                    <button onclick="resetAll()" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-md uppercase text-xs">Reset Toàn Bộ</button>
+                    <button onclick="editInfo()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-md uppercase text-xs">Sửa Thông Tin</button>
                 </div>
 
                 <div class="text-right text-sm md:text-base space-y-1">
@@ -159,294 +74,128 @@
                     <p>Cảnh cáo: <span id="blue-warned" class="text-yellow-400 font-bold">0</span></p>
                     <p>Y tế: <span id="blue-medical" class="text-yellow-400 font-bold">0</span></p>
                 </div>
-
-                <div class="absolute right-0 bottom-0 mr-4 md:mr-8 flex gap-2">
-                    <button id="edit-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">SỬA</button>
-                    <button id="reset-all-btn" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md">RESET</button>
-                </div>
-            </div>
-
-            <div class="mt-4 pt-4 border-t border-gray-700 flex flex-col items-center text-xs md:text-sm text-gray-400">
-                <p class="font-bold text-lg mb-2 text-yellow-400 uppercase">Phím tắt (Sync Online)</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-1 text-left">
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F1</span>: Start/Pause</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F2</span>: Reset Time</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F3</span>: Chuyển Trạng Thái</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F4/F5</span>: +/- Điểm Đỏ</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F6/F7</span>: +/- Điểm Xanh</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">R/W/M</span>: Đỏ (Lỗi)</p>
-                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">Ctrl+R/W/M</span>: Xanh (Lỗi)</p>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-        // Firebase Config (Provided by environment)
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vovinam-scoreboard-default';
-
-        // Local State
-        let state = {
-            score: { red: 0, blue: 0 },
-            timer: 90,
-            isRunning: false,
-            status: "PAUSED",
-            fouls: {
-                red: { remind: 0, warned: 0, medical: 0 },
-                blue: { remind: 0, warned: 0, medical: 0 }
-            },
-            matchNumber: 1,
-            category: "Nội Dung Thi Đấu",
-            lastUpdatedBy: null
+    <script>
+        // 1. Cấu hình Firebase từ ảnh bạn gửi
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2l67XVpiSnzdjWj7-9Nr8UCOXW9XKVnk",
+            authDomain: "vovinam-online.firebaseapp.com",
+            databaseURL: "https://vovinam-online-default-rtdb.firebaseio.com",
+            projectId: "vovinam-online",
+            storageBucket: "vovinam-online.firebasestorage.app",
+            messagingSenderId: "554190803446",
+            appId: "1:554190803446:web:fe9c66dfcbb8b96d9a37d7",
+            measurementId: "G-8L6D9VMHR9"
         };
 
-        let timerInterval = null;
-        let isUserAuthenticated = false;
+        // Khởi tạo
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const stateRef = database.ref('match_state');
 
-        const $ = (id) => document.getElementById(id);
+        // State mặc định
+        let localState = {
+            redScore: 0, blueScore: 0,
+            timer: 90, isRunning: false,
+            redFouls: { remind: 0, warned: 0, medical: 0 },
+            blueFouls: { remind: 0, warned: 0, medical: 0 },
+            matchNumber: 1, category: "Nội Dung Thi Đấu"
+        };
 
-        // Firestore Path (CRITICAL: Must have 6 segments for a document reference)
-        // Path: artifacts/{appId}/public/data/{collectionName}/{documentId}
-        const getDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'match_state', 'current');
-
-        // Authentication logic
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth error:", error);
-                $('conn-text').textContent = "Auth Failed";
-            }
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                isUserAuthenticated = true;
-                $('conn-dot').classList.replace('offline', 'online');
-                $('conn-text').textContent = "Online - Sync Active";
-                listenToCloudChanges();
-            } else {
-                isUserAuthenticated = false;
-                $('conn-dot').classList.replace('online', 'offline');
-                $('conn-text').textContent = "Offline";
+        // 2. Lắng nghe dữ liệu từ Cloud (TẤT CẢ THIẾT BỊ ĐỀU NHẬN ĐƯỢC)
+        stateRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                localState = data;
+                updateUI();
             }
         });
 
-        // Sync local state to Cloud
-        async function pushToCloud() {
-            if (!isUserAuthenticated) return;
-            try {
-                await setDoc(getDocRef(), {
-                    ...state,
-                    lastUpdatedBy: auth.currentUser.uid,
-                    serverTime: Date.now()
-                });
-            } catch (e) {
-                console.error("Sync error:", e);
-            }
-        }
-
-        // Listen for updates from other devices
-        function listenToCloudChanges() {
-            onSnapshot(getDocRef(), (snapshot) => {
-                if (snapshot.exists()) {
-                    const cloudData = snapshot.data();
-                    
-                    if (cloudData.lastUpdatedBy !== auth.currentUser?.uid) {
-                        state = { ...state, ...cloudData };
-                        
-                        if (state.isRunning && !timerInterval) {
-                            startLocalTimer();
-                        } else if (!state.isRunning && timerInterval) {
-                            stopLocalTimer();
-                        }
-                        
-                        render();
-                    }
-                }
-            }, (error) => {
-                console.error("Snapshot error:", error);
-            });
-        }
-
-        function render() {
-            $('red-score').textContent = state.score.red;
-            $('blue-score').textContent = state.score.blue;
-            $('timer-display').textContent = formatTime(state.timer);
+        // 3. Cập nhật giao diện
+        function updateUI() {
+            document.getElementById('red-score').innerText = localState.redScore;
+            document.getElementById('blue-score').innerText = localState.blueScore;
+            document.getElementById('timer-display').innerText = formatTime(localState.timer);
+            document.getElementById('match-status').innerText = localState.isRunning ? "RUNNING" : "PAUSED";
             
-            $('red-remind').textContent = state.fouls.red.remind;
-            $('red-warned').textContent = state.fouls.red.warned;
-            $('red-medical').textContent = state.fouls.red.medical;
-            
-            $('blue-remind').textContent = state.fouls.blue.remind;
-            $('blue-warned').textContent = state.fouls.blue.warned;
-            $('blue-medical').textContent = state.fouls.blue.medical;
+            document.getElementById('red-remind').innerText = localState.redFouls.remind;
+            document.getElementById('red-warned').innerText = localState.redFouls.warned;
+            document.getElementById('red-medical').innerText = localState.redFouls.medical;
 
-            $('match-number').textContent = state.matchNumber;
-            $('category').textContent = state.category;
+            document.getElementById('blue-remind').innerText = localState.blueFouls.remind;
+            document.getElementById('blue-warned').innerText = localState.blueFouls.warned;
+            document.getElementById('blue-medical').innerText = localState.blueFouls.medical;
 
-            const isBreak = state.status === "Break Time";
-            $('break-time-message').classList.toggle('hidden', !isBreak);
-            $('match-status').textContent = state.status;
+            document.getElementById('match-number').innerText = localState.matchNumber;
+            document.getElementById('category').innerText = localState.category;
 
-            const rfItems = [1, 2, 3, 4, 5];
-            renderRF('rf-list-red', rfItems, false);
-            renderRF('rf-list-blue', rfItems, true);
+            document.getElementById('conn-dot').className = "indicator-dot online";
+            document.getElementById('conn-text').innerText = "Online - Đồng bộ";
         }
 
-        function formatTime(s) {
-            const m = Math.floor(s / 60);
-            const sec = s % 60;
-            return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-        }
-
-        function renderRF(id, items, right) {
-            const c = $(id);
-            if (c.children.length > 0) return;
-            c.innerHTML = items.map((it, i) => `<p class="${right ? 'text-right' : 'text-left'}">RF ${it} <span class="opacity-50">${i+1}</span></p>`).join('');
-        }
-
-        window.increaseScore = (team) => {
-            state.score[team]++;
-            render();
-            pushToCloud();
-        };
-
-        function decreaseScore(team) {
-            if (state.score[team] > 0) {
-                state.score[team]--;
-                render();
-                pushToCloud();
-            }
+        // 4. Các hàm điều khiển (Gửi dữ liệu lên Cloud)
+        function updateScore(team, val) {
+            if (team === 'red') localState.redScore += val;
+            else localState.blueScore += val;
+            stateRef.set(localState);
         }
 
         function toggleTimer() {
-            state.isRunning = !state.isRunning;
-            state.status = state.isRunning ? "RUNNING" : "PAUSED";
-            
-            if (state.isRunning) {
-                startLocalTimer();
-            } else {
-                stopLocalTimer();
-            }
-            render();
-            pushToCloud();
+            localState.isRunning = !localState.isRunning;
+            stateRef.set(localState);
         }
 
-        function startLocalTimer() {
-            if (timerInterval) return;
-            timerInterval = setInterval(() => {
-                if (state.timer > 0) {
-                    state.timer--;
-                    $('timer-display').textContent = formatTime(state.timer);
-                } else {
-                    stopLocalTimer();
-                    state.isRunning = false;
-                    state.status = "END";
-                    render();
-                    pushToCloud();
+        // Đồng hồ đếm ngược chạy ở máy chủ/tất cả máy (Logic đơn giản)
+        setInterval(() => {
+            if (localState.isRunning && localState.timer > 0) {
+                // Chỉ máy "chủ" hoặc máy đầu tiên nên chạy cái này để tránh trừ điểm loạn
+                // Tuy nhiên trong demo này, chúng ta sẽ để dữ liệu đồng bộ
+                localState.timer--;
+                stateRef.child('timer').set(localState.timer);
+                if (localState.timer === 0) {
+                    localState.isRunning = false;
+                    stateRef.set(localState);
                 }
-            }, 1000);
-        }
-
-        function stopLocalTimer() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-
-        function resetTimer() {
-            stopLocalTimer();
-            state.timer = 90;
-            state.isRunning = false;
-            state.status = "PAUSED";
-            render();
-            pushToCloud();
-        }
-
-        function updateFoul(team, type) {
-            if (type === 'remind') {
-                state.fouls[team].remind++;
-                if (state.fouls[team].remind >= 3) {
-                    state.fouls[team].warned++;
-                    state.fouls[team].remind = 0;
-                }
-            } else {
-                state.fouls[team][type]++;
             }
-            render();
-            pushToCloud();
+        }, 1000);
+
+        function formatTime(s) {
+            let m = Math.floor(s / 60);
+            let sec = s % 60;
+            return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
         function resetAll() {
-            if (!confirm("Reset toàn bộ dữ liệu trận đấu?")) return;
-            stopLocalTimer();
-            state = {
-                ...state,
-                score: { red: 0, blue: 0 },
-                timer: 90,
-                isRunning: false,
-                status: "PAUSED",
-                fouls: {
-                    red: { remind: 0, warned: 0, medical: 0 },
-                    blue: { remind: 0, warned: 0, medical: 0 }
-                }
-            };
-            render();
-            pushToCloud();
+            if(confirm("Reset toàn bộ trận đấu?")) {
+                stateRef.set({
+                    redScore: 0, blueScore: 0, timer: 90, isRunning: false,
+                    redFouls: { remind: 0, warned: 0, medical: 0 },
+                    blueFouls: { remind: 0, warned: 0, medical: 0 },
+                    matchNumber: 1, category: "Nội Dung Thi Đấu"
+                });
+            }
         }
 
         function editInfo() {
-            const n = prompt("Số trận:", state.matchNumber);
-            if (n) state.matchNumber = n;
-            const c = prompt("Nội dung:", state.category);
-            if (c) state.category = c;
-            render();
-            pushToCloud();
+            localState.matchNumber = prompt("Số trận:", localState.matchNumber);
+            localState.category = prompt("Nội dung:", localState.category);
+            stateRef.set(localState);
         }
 
+        // Phím tắt nhanh
         document.addEventListener('keydown', (e) => {
-            if (e.key.startsWith('F') || e.ctrlKey) e.preventDefault();
-            const team = e.ctrlKey ? 'blue' : 'red';
-            
-            switch(e.key) {
-                case 'F1': toggleTimer(); break;
-                case 'F2': resetTimer(); break;
-                case 'F3': 
-                    state.status = (state.status === "Break Time") ? "PAUSED" : "Break Time";
-                    render(); pushToCloud();
-                    break;
-                case 'F4': window.increaseScore('red'); break;
-                case 'F5': decreaseScore('red'); break;
-                case 'F6': window.increaseScore('blue'); break;
-                case 'F7': decreaseScore('blue'); break;
-            }
-
-            const key = e.key.toUpperCase();
-            if (key === 'R') updateFoul(team, 'remind');
-            if (key === 'W') updateFoul(team, 'warned');
-            if (key === 'M') updateFoul(team, 'medical');
+            if (e.key === 'F4') updateScore('red', 1);
+            if (e.key === 'F5') updateScore('red', -1);
+            if (e.key === 'F6') updateScore('blue', 1);
+            if (e.key === 'F7') updateScore('blue', -1);
+            if (e.key === 'F1') toggleTimer();
         });
-
-        window.onload = () => {
-            initAuth();
-            $('reset-all-btn').onclick = resetAll;
-            $('edit-btn').onclick = editInfo;
-            render();
-        };
-
     </script>
 </body>
 </html>
