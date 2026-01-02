@@ -8,7 +8,7 @@
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
         
-        /* GIAO DIỆN MÁY TÍNH (GIỐNG ẢNH THI ĐẤU) */
+        /* GIAO DIỆN MÁY TÍNH */
         #desktop-ui { display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box; }
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
         
@@ -69,8 +69,8 @@
                 <div class="foul-item">Warned: <span id="red-warned" class="foul-val">0</span></div>
                 <div class="foul-item">Medical: <span id="red-medical" class="foul-val">0</span></div>
             </div>
-            <div class="text-center self-center text-gray-500 text-sm">
-                F1: Start/Pause | R/W/M: Foul Red | Ctrl+R/W/M: Foul Blue
+            <div class="text-center self-center text-gray-400 text-xs">
+                F1: Start/Pause | F2/F3: Đỏ +/- | F4/F5: Xanh +/- | F6: Reset All | R/W/M: Foul (Ctrl để đổi bên)
             </div>
             <div class="space-y-2 text-right">
                 <div class="foul-item">Remind: <span id="blue-remind" class="foul-val">0</span></div>
@@ -115,13 +115,11 @@
             timer: 90, isRunning: false, round: 1, isBreak: false
         };
 
-        // Nhận diện thiết bị
         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
         }
 
-        // ĐỒNG BỘ FIREBASE
         db.on('value', (snap) => {
             const data = snap.val();
             if (data) {
@@ -151,7 +149,6 @@
             return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
-        // LOGIC THỜI GIAN
         setInterval(() => {
             if (state.isRunning && state.timer > 0) {
                 state.timer--;
@@ -164,18 +161,17 @@
         function handleTimerEnd() {
             if (state.round === 1 && !state.isBreak) {
                 state.isBreak = true;
-                state.timer = 45; // Nghỉ 45 giây
+                state.timer = 45;
             } else if (state.isBreak) {
                 state.isBreak = false;
                 state.round = 2;
-                state.timer = 90; // Hiệp 2 - 1:30 giây
+                state.timer = 90;
             } else {
                 state.isRunning = false;
             }
             db.set(state);
         }
 
-        // ĐIỀU KHIỂN
         function updateScore(team, val) {
             if (team === 'red') state.redScore = Math.max(0, state.redScore + val);
             else state.blueScore = Math.max(0, state.blueScore + val);
@@ -196,9 +192,20 @@
             db.set(state);
         }
 
-        // PHÍM TẮT BÀN PHÍM
+        function resetEverything() {
+            if(confirm("Reset toàn bộ trận đấu?")) {
+                db.set({
+                    redScore: 0, blueScore: 0,
+                    redFouls: { remind: 0, warned: 0, medical: 0 },
+                    blueFouls: { remind: 0, warned: 0, medical: 0 },
+                    timer: 90, isRunning: false, round: 1, isBreak: false
+                });
+            }
+        }
+
+        // PHÍM TẮT BÀN PHÍM CẬP NHẬT
         document.addEventListener('keydown', (e) => {
-            e.preventDefault();
+            if (e.key.startsWith('F')) e.preventDefault();
             const isCtrl = e.ctrlKey;
             const key = e.key.toUpperCase();
 
@@ -206,22 +213,13 @@
             if (e.key === 'F2') updateScore('red', 1);
             if (e.key === 'F3') updateScore('red', -1);
             if (e.key === 'F4') updateScore('blue', 1);
-            if (e.key === 'F6') updateScore('blue', -1);
-            
+            if (e.key === 'F5') updateScore('blue', -1); // F5 TRỪ ĐIỂM XANH
+            if (e.key === 'F6') resetEverything();      // F6 RESET TẤT CẢ
+
             const team = isCtrl ? 'blue' : 'red';
             if (key === 'R') addFoul(team, 'remind');
             if (key === 'W') addFoul(team, 'warned');
             if (key === 'M') addFoul(team, 'medical');
-            
-            // Phím tắt phụ cho Reset
-            if (e.key === 'Escape') {
-                if(confirm("Reset toàn bộ?")) db.set({
-                    redScore: 0, blueScore: 0,
-                    redFouls: { remind: 0, warned: 0, medical: 0 },
-                    blueFouls: { remind: 0, warned: 0, medical: 0 },
-                    timer: 90, isRunning: false, round: 1, isBreak: false
-                });
-            }
         });
     </script>
 </body>
