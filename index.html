@@ -2,78 +2,64 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảng Điểm Vovinam - Online Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vovinam Remote Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0d0d0d; font-family: 'Inter', sans-serif; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; margin: 0; overflow: auto; }
-        .scoreboard-wrapper { width: 100%; max-width: 1400px; aspect-ratio: 16 / 9; min-height: 500px; }
-        .scoreboard-container { width: 100%; height: 100%; border: 4px solid #ff0000; box-shadow: 0 0 40px rgba(255, 0, 0, 0.5); background-color: #000000; padding: 2% 4%; position: relative; }
-        .large-score { font-size: 15vw; line-height: 1; font-weight: 900; text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5); }
-        @media (min-width: 1200px) { .large-score { font-size: 12rem; } }
-        .timer-text { font-size: 3.5rem; font-weight: 700; letter-spacing: -2px; }
-        .score-red { background-color: #cc0000; cursor: pointer; }
-        .score-blue { background-color: #0000cc; cursor: pointer; }
-        .timer-box { background-color: #222; border: 2px solid #555; min-width: 200px; }
-        .status-indicator { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 99px; }
-        .indicator-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
-        .offline { background-color: #ef4444; }
+        body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: sans-serif; }
+        /* Giao diện Remote cho điện thoại */
+        .remote-button {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: 900;
+            border: 2px solid #000;
+            touch-action: manipulation;
+        }
+        .bg-red-score { background-color: #cc0000; }
+        .bg-blue-score { background-color: #0000cc; }
+        .remote-button:active { opacity: 0.6; transform: scale(0.98); }
+        
+        /* Ẩn hiện giữa Remote và Bảng điểm */
+        #remote-ui { display: none; height: 100vh; flex-direction: column; }
+        #desktop-ui { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        /* Hiển thị bảng điểm trên máy tính */
+        .large-score { font-size: 12rem; font-weight: 900; }
     </style>
 </head>
 <body>
 
-    <div class="scoreboard-wrapper">
-        <div class="scoreboard-container rounded-lg">
-            
-            <div class="status-indicator">
-                <div id="conn-dot" class="indicator-dot offline"></div>
-                <span id="conn-text">Đang kết nối Cloud...</span>
-            </div>
+    <div id="remote-ui" class="p-2 gap-2">
+        <div class="flex flex-1 gap-2">
+            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 1)">ĐỎ +1</div>
+            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 2)">ĐỎ +2</div>
+        </div>
+        <div class="flex flex-1 gap-2">
+            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 1)">XANH +1</div>
+            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 2)">XANH +2</div>
+        </div>
+        <button onclick="location.reload()" class="bg-gray-800 py-2 rounded-lg text-xs opacity-50">Làm mới kết nối</button>
+    </div>
 
-            <div class="flex flex-col items-center mb-4 space-y-1">
-                <div class="flex justify-between w-full text-lg font-semibold px-4 md:px-8">
-                    <span class="text-gray-300">Trận: <span id="match-number">1</span></span>
-                    <span class="text-gray-300">CHUNG KẾT</span>
-                    <span id="category" class="text-gray-300">NỘI DUNG THI ĐẤU</span>
+    <div id="desktop-ui">
+        <div class="w-full max-w-5xl border-8 border-red-600 p-10 bg-black rounded-3xl text-center shadow-[0_0_50px_rgba(255,0,0,0.4)]">
+            <h1 class="text-4xl font-bold text-yellow-500 mb-10 uppercase">Bảng Điểm Vovinam Online</h1>
+            <div class="flex justify-around items-center">
+                <div class="text-red-600">
+                    <p class="text-2xl font-bold uppercase">Đội Đỏ</p>
+                    <div id="red-score" class="large-score">0</div>
                 </div>
-            </div>
-
-            <div class="flex relative flex-grow">
-                <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black transition-all pt-10 pb-10" onclick="updateScore('red', 1)">
-                    <span id="red-score" class="large-score">0</span>
-                </div>
-                
-                <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black transition-all pt-10 pb-10" onclick="updateScore('blue', 1)">
-                    <span id="blue-score" class="large-score">0</span>
-                </div>
-
-                <div class="absolute left-1/2 transform -translate-x-1/2 -top-10 z-20">
-                    <div class="timer-box rounded-lg px-6 py-2 text-center shadow-lg" onclick="toggleTimer()" style="cursor:pointer">
-                        <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">PAUSED</p>
-                        <p id="timer-display" class="timer-text">01:30</p>
-                    </div>
+                <div class="text-blue-600">
+                    <p class="text-2xl font-bold uppercase">Đội Xanh</p>
+                    <div id="blue-score" class="large-score">0</div>
                 </div>
             </div>
-
-            <div class="flex justify-between items-end mt-4 px-2 md:px-8">
-                <div class="text-left text-sm md:text-base space-y-1">
-                    <p>Nhắc nhở: <span id="red-remind" class="text-yellow-400 font-bold">0</span></p>
-                    <p>Cảnh cáo: <span id="red-warned" class="text-yellow-400 font-bold">0</span></p>
-                    <p>Y tế: <span id="red-medical" class="text-yellow-400 font-bold">0</span></p>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <button onclick="resetAll()" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-md uppercase text-xs">Reset Toàn Bộ</button>
-                    <button onclick="editInfo()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-md uppercase text-xs">Sửa Thông Tin</button>
-                </div>
-
-                <div class="text-right text-sm md:text-base space-y-1">
-                    <p>Nhắc nhở: <span id="blue-remind" class="text-yellow-400 font-bold">0</span></p>
-                    <p>Cảnh cáo: <span id="blue-warned" class="text-yellow-400 font-bold">0</span></p>
-                    <p>Y tế: <span id="blue-medical" class="text-yellow-400 font-bold">0</span></p>
-                </div>
+            <div class="mt-10">
+                <button onclick="resetAll()" class="bg-gray-700 px-6 py-2 rounded-lg text-sm">RESET ĐIỂM</button>
+                <p class="mt-4 text-gray-500 text-xs">Mở link này trên điện thoại để hiện 4 nút bấm</p>
             </div>
         </div>
     </div>
@@ -82,7 +68,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // 1. Cấu hình Firebase từ ảnh bạn gửi
+        // Cấu hình Firebase của bạn
         const firebaseConfig = {
             apiKey: "AIzaSyB2l67XVpiSnzdjWj7-9Nr8UCOXW9XKVnk",
             authDomain: "vovinam-online.firebaseapp.com",
@@ -94,108 +80,40 @@
             measurementId: "G-8L6D9VMHR9"
         };
 
-        // Khởi tạo
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const stateRef = database.ref('match_state');
+        const scoreRef = database.ref('match_score');
 
-        // State mặc định
-        let localState = {
-            redScore: 0, blueScore: 0,
-            timer: 90, isRunning: false,
-            redFouls: { remind: 0, warned: 0, medical: 0 },
-            blueFouls: { remind: 0, warned: 0, medical: 0 },
-            matchNumber: 1, category: "Nội Dung Thi Đấu"
-        };
+        let currentScore = { red: 0, blue: 0 };
 
-        // 2. Lắng nghe dữ liệu từ Cloud (TẤT CẢ THIẾT BỊ ĐỀU NHẬN ĐƯỢC)
-        stateRef.on('value', (snapshot) => {
+        // Tự động nhận diện thiết bị
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            document.getElementById('remote-ui').style.display = 'flex';
+            document.getElementById('desktop-ui').style.display = 'none';
+        }
+
+        // Lắng nghe dữ liệu
+        scoreRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                localState = data;
-                updateUI();
+                currentScore = data;
+                document.getElementById('red-score').innerText = data.red;
+                document.getElementById('blue-score').innerText = data.blue;
             }
         });
 
-        // 3. Cập nhật giao diện
-        function updateUI() {
-            document.getElementById('red-score').innerText = localState.redScore;
-            document.getElementById('blue-score').innerText = localState.blueScore;
-            document.getElementById('timer-display').innerText = formatTime(localState.timer);
-            document.getElementById('match-status').innerText = localState.isRunning ? "RUNNING" : "PAUSED";
-            
-            document.getElementById('red-remind').innerText = localState.redFouls.remind;
-            document.getElementById('red-warned').innerText = localState.redFouls.warned;
-            document.getElementById('red-medical').innerText = localState.redFouls.medical;
-
-            document.getElementById('blue-remind').innerText = localState.blueFouls.remind;
-            document.getElementById('blue-warned').innerText = localState.blueFouls.warned;
-            document.getElementById('blue-medical').innerText = localState.blueFouls.medical;
-
-            document.getElementById('match-number').innerText = localState.matchNumber;
-            document.getElementById('category').innerText = localState.category;
-
-            document.getElementById('conn-dot').className = "indicator-dot online";
-            document.getElementById('conn-text').innerText = "Online - Đồng bộ";
-        }
-
-        // 4. Các hàm điều khiển (Gửi dữ liệu lên Cloud)
-        function updateScore(team, val) {
-            if (team === 'red') localState.redScore += val;
-            else localState.blueScore += val;
-            stateRef.set(localState);
-        }
-
-        function toggleTimer() {
-            localState.isRunning = !localState.isRunning;
-            stateRef.set(localState);
-        }
-
-        // Đồng hồ đếm ngược chạy ở máy chủ/tất cả máy (Logic đơn giản)
-        setInterval(() => {
-            if (localState.isRunning && localState.timer > 0) {
-                // Chỉ máy "chủ" hoặc máy đầu tiên nên chạy cái này để tránh trừ điểm loạn
-                // Tuy nhiên trong demo này, chúng ta sẽ để dữ liệu đồng bộ
-                localState.timer--;
-                stateRef.child('timer').set(localState.timer);
-                if (localState.timer === 0) {
-                    localState.isRunning = false;
-                    stateRef.set(localState);
-                }
-            }
-        }, 1000);
-
-        function formatTime(s) {
-            let m = Math.floor(s / 60);
-            let sec = s % 60;
-            return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+        // Hàm cộng điểm (+1 hoặc +2)
+        function updateScore(team, points) {
+            if (team === 'red') currentScore.red += points;
+            else currentScore.blue += points;
+            scoreRef.set(currentScore);
         }
 
         function resetAll() {
-            if(confirm("Reset toàn bộ trận đấu?")) {
-                stateRef.set({
-                    redScore: 0, blueScore: 0, timer: 90, isRunning: false,
-                    redFouls: { remind: 0, warned: 0, medical: 0 },
-                    blueFouls: { remind: 0, warned: 0, medical: 0 },
-                    matchNumber: 1, category: "Nội Dung Thi Đấu"
-                });
+            if(confirm("Bạn muốn đưa điểm về 0?")) {
+                scoreRef.set({ red: 0, blue: 0 });
             }
         }
-
-        function editInfo() {
-            localState.matchNumber = prompt("Số trận:", localState.matchNumber);
-            localState.category = prompt("Nội dung:", localState.category);
-            stateRef.set(localState);
-        }
-
-        // Phím tắt nhanh
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F4') updateScore('red', 1);
-            if (e.key === 'F5') updateScore('red', -1);
-            if (e.key === 'F6') updateScore('blue', 1);
-            if (e.key === 'F7') updateScore('blue', -1);
-            if (e.key === 'F1') toggleTimer();
-        });
     </script>
 </body>
 </html>
