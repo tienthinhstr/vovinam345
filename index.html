@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điểm Vovinam - Full HD 16:9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for 16:9 aspect ratio and dark background */
+        body {
+            background-color: #0d0d0d;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px; /* Giảm padding tổng thể */
+            margin: 0;
+            overflow: auto; /* Cho phép cuộn nếu màn hình quá nhỏ */
+        }
+
+        .scoreboard-wrapper {
+            /* Vận dụng kỹ thuật 16:9 aspect ratio */
+            width: 100%;
+            max-width: 100vh * (16 / 9); /* Giới hạn chiều ngang dựa trên chiều cao 16:9 */
+            aspect-ratio: 16 / 9; /* Giữ tỷ lệ 16:9 */
+            min-height: 500px; /* Chiều cao tối thiểu */
+            max-height: 90vh; /* Chiều cao tối đa */
+        }
+
+        .scoreboard-container {
+            width: 100%;
+            height: 100%;
+            border: 4px solid #ff0000; /* Red border effect */
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.5);
+            background-color: #000000;
+            padding: 2% 4%; /* Padding tương đối */
+            box-sizing: border-box;
+        }
+
+        /* Responsive Font Sizes based on container size */
+        .large-score {
+            font-size: 15vw; /* Tăng cỡ chữ lớn, sẽ thu nhỏ theo màn hình */
+            line-height: 1;
+            font-weight: 900;
+            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+        }
+        @media (min-width: 1200px) {
+             .large-score {
+                font-size: 12rem; /* Giữ kích thước lớn trên desktop */
+            }
+        }
+        @media (max-width: 768px) {
+             .large-score {
+                font-size: 8rem;
+            }
+        }
+
+        .timer-text {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -2px;
+        }
+
+        .score-red {
+            background-color: #cc0000;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .score-blue {
+            background-color: #0000cc;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .timer-box {
+            background-color: #222;
+            border: 2px solid #555;
+            min-width: 200px;
+        }
+
+        .break-time-overlay {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 3px solid white;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-wrapper">
+
+        <div class="scoreboard-container rounded-lg">
+            <div class="flex flex-col items-center mb-4 space-y-1">
+                <div class="flex justify-between w-full text-lg font-semibold px-4 md:px-8">
+                    <span class="text-gray-300">Match: <span id="match-number">21</span></span>
+                    <span class="text-gray-300">Final</span>
+                    <span class="text-gray-300"><span id="category">72kg Male</span></span>
+                </div>
+            </div>
+
+            <div class="flex relative flex-grow h-auto">
+                
+                <div class="w-1/12 text-left pr-2 hidden sm:block">
+                    <div id="rf-list-red" class="space-y-1 text-sm md:text-base font-mono mt-4">
+                        </div>
+                </div>
+
+                <div class="flex-grow flex relative">
+                    <div id="red-score-block" class="score-red w-1/2 flex flex-col justify-center items-center rounded-l-lg border-r-4 border-black transition-all duration-300 hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('red')">
+                        <span id="red-score" class="large-score">1</span>
+                    </div>
+                    
+                    <div id="blue-score-block" class="score-blue w-1/2 flex flex-col justify-center items-center rounded-r-lg border-l-4 border-black transition-all duration-300 hover:brightness-110 active:scale-[0.99] pt-10 pb-10" onclick="increaseScore('blue')">
+                        <span id="blue-score" class="large-score">5</span>
+                    </div>
+
+                    <div class="absolute left-1/2 transform -translate-x-1/2 -top-10 z-20">
+                        <div class="timer-box rounded-lg px-6 py-2 text-center shadow-lg">
+                            <p class="text-sm font-medium text-gray-400 uppercase" id="match-status">Half-time</p>
+                            <p id="timer-display" class="timer-text">00:54</p>
+                        </div>
+                    </div>
+
+                    <div id="break-time-message" class="break-time-overlay hidden">Break Time</div>
+                </div>
+
+                <div class="w-1/12 text-right pl-2 hidden sm:block">
+                    <div id="rf-list-blue" class="space-y-1 text-sm md:text-base font-mono mt-4">
+                        </div>
+                </div>
+
+            </div>
+
+            <div class="flex justify-between items-end mt-4 px-2 md:px-8">
+                <div class="text-left text-sm md:text-base space-y-1">
+                    <p>Remind: <span id="red-remind" class="text-yellow-400 font-bold">0</span></p>
+                    <p>Warned: <span id="red-warned" class="text-yellow-400 font-bold">0</span></p>
+                    <p>Medical: <span id="red-medical" class="text-yellow-400 font-bold">0</span></p>
+                </div>
+
+                <div class="flex-grow flex justify-center space-x-16 text-sm md:text-base font-bold">
+                    <p id="red-boutsRd" class="text-gray-400">0 bouts/Rd</p>
+                    <p id="blue-boutsRd" class="text-gray-400">0 bouts/Rd</p>
+                </div>
+
+                <div class="text-right text-sm md:text-base space-y-1">
+                    <p>Remind: <span id="blue-remind" class="text-yellow-400 font-bold">0</span></p>
+                    <p>Warned: <span id="blue-warned" class="text-yellow-400 font-bold">0</span></p>
+                    <p>Medical: <span id="blue-medical" class="text-yellow-400 font-bold">0</span></p>
+                </div>
+
+                <button id="the-end-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-all">
+                    THE END
+                </button>
+                
+                <button id="reset-all-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 -translate-x-32 bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition-all">
+                    RESET ALL
+                </button>
+
+                <button id="edit-btn" class="absolute right-0 bottom-0 mr-4 md:mr-8 -translate-x-64 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-all">
+                    EDIT
+                </button>
+                
+                <div class="absolute right-0 bottom-0 mr-4 md:mr-8 mt-16 text-xs text-red-500 italic tracking-widest">
+                    <p>Match SKT</p>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-700 flex flex-col items-center text-xs md:text-sm text-gray-400">
+                <p class="font-bold text-lg mb-2 text-yellow-400">PHÍM TẮT ĐIỀU KHIỂN (KEYBOARD SHORTCUTS)</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-1 text-left">
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F1</span>: Bắt Đầu / Tạm Dừng</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F2</span>: Đặt Lại Đồng Hồ</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F3</span>: Chuyển Trạng Thái</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F4</span>: + Điểm Đỏ (Tăng)</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F5</span>: - Điểm Đỏ (Giảm)</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F6</span>: + Điểm Xanh (Tăng)</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F7</span>: - Điểm Xanh (Giảm)</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">F10</span>: Đặt Lại Tất Cả</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-left mt-2">
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">R</span>: + Remind Đỏ</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">W</span>: + Warned Đỏ</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">M</span>: + Medical Đỏ</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">Ctrl+R</span>: + Remind Xanh</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">Ctrl+W</span>: + Warned Xanh</p>
+                    <p><span class="text-white font-mono bg-gray-700 px-2 py-0.5 rounded-sm">Ctrl+M</span>: + Medical Xanh</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let state = {
+            score: {
+                red: 1,
+                blue: 5
+            },
+            timer: 54, // Start at 54s as seen in the first image
+            isRunning: false,
+            interval: null,
+            status: "Half-time", // "Half-time" or "Break Time"
+            
+            // New state for Fouls
+            fouls: {
+                red: { remind: 0, warned: 0, medical: 0 },
+                blue: { remind: 0, warned: 0, medical: 0 }
+            },
+            
+            // Additional Match Info (Dùng để EDIT)
+            matchNumber: 21,
+            category: "72kg Male"
+        };
+
+        const DURATION_SECONDS = 90; // Default match time 1:30
+        const REMIND_LIMIT = 3; // 3 Reminds = 1 Warned
+
+        const $ = (id) => document.getElementById(id);
+
+        /**
+         * Converts total seconds to MM:SS format.
+         * @param {number} totalSeconds
+         * @returns {string}
+         */
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        /**
+         * Renders the current state to the DOM.
+         */
+        function render() {
+            // Scores
+            $('red-score').textContent = state.score.red;
+            $('blue-score').textContent = state.score.blue;
+
+            // Timer
+            $('timer-display').textContent = formatTime(state.timer);
+            
+            // Fouls/Warnings
+            $('red-remind').textContent = state.fouls.red.remind;
+            $('red-warned').textContent = state.fouls.red.warned;
+            $('red-medical').textContent = state.fouls.red.medical;
+            
+            $('blue-remind').textContent = state.fouls.blue.remind;
+            $('blue-warned').textContent = state.fouls.blue.warned;
+            $('blue-medical').textContent = state.fouls.blue.medical;
+
+            // Match Info
+            $('match-number').textContent = state.matchNumber;
+            $('category').textContent = state.category;
+
+            // RF Lists (Render once, static in this demo)
+            const renderRFList = (containerId, items, isRight) => {
+                const container = $(containerId);
+                // Only render if empty to avoid re-rendering static content
+                if (container.children.length === 0) {
+                    container.innerHTML = items.map((item, index) => {
+                        const style = `text-white ${isRight ? 'text-right' : 'text-left'}`;
+                        // The opacity-50 is for the small number next to the main RF number
+                        return `<p class="${style}">RF ${item} <span class="opacity-50">${index + 1}</span></p>`;
+                    }).join('');
+                }
+            };
+            // Static RF data for the look
+            const rfItems = [1, 2, 3, 4, 5];
+            renderRFList('rf-list-red', rfItems, false);
+            renderRFList('rf-list-blue', rfItems, true);
+
+            // Match status
+            const isBreak = state.status === "Break Time";
+            $('break-time-message').classList.toggle('hidden', !isBreak);
+            
+            if (state.timer === 0) {
+                $('match-status').textContent = "MATCH ENDED";
+            } else if (isBreak) {
+                $('match-status').textContent = "Break Time";
+            } else if (!state.isRunning) {
+                $('match-status').textContent = "PAUSED";
+            } else {
+                $('match-status').textContent = "Half-time";
+            }
+        }
+
+        /**
+         * Toggles the timer (Start/Pause).
+         */
+        function toggleTimer() {
+            if (state.isRunning) {
+                // Pause
+                clearInterval(state.interval);
+                state.isRunning = false;
+            } else {
+                // Start
+                if (state.timer > 0) {
+                    state.isRunning = true;
+                    state.interval = setInterval(() => {
+                        if (state.timer > 0) {
+                            state.timer--;
+                            render();
+                        } else {
+                            clearInterval(state.interval);
+                            state.isRunning = false;
+                            state.status = "MATCH ENDED";
+                            render();
+                        }
+                    }, 1000);
+                } else {
+                    state.status = "MATCH ENDED";
+                }
+            }
+            render();
+        }
+
+        /**
+         * Resets the timer to the default duration.
+         */
+        function resetTimer() {
+            clearInterval(state.interval);
+            state.isRunning = false;
+            state.timer = DURATION_SECONDS;
+            state.status = "Half-time";
+            render();
+        }
+
+        /**
+         * Toggles the match status between Half-time and Break Time.
+         */
+        function toggleStatus() {
+            if (state.status === "Half-time" || state.status === "MATCH ENDED" || state.status === "PAUSED") {
+                state.status = "Break Time";
+                clearInterval(state.interval); // Pause timer on break
+                state.isRunning = false;
+            } else {
+                state.status = "Half-time";
+            }
+            render();
+        }
+
+        /**
+         * Increases the score for the specified team.
+         * @param {'red' | 'blue'} team
+         */
+        function increaseScore(team) {
+            state.score[team]++;
+            // Flash effect on score block
+            const block = $(`${team}-score-block`);
+            block.classList.add('animate-pulse');
+            setTimeout(() => block.classList.remove('animate-pulse'), 300);
+            render();
+        }
+
+        /**
+         * Decreases the score for the specified team (min 0).
+         * @param {'red' | 'blue'} team
+         */
+        function decreaseScore(team) {
+            if (state.score[team] > 0) {
+                state.score[team]--;
+                render();
+            }
+        }
+
+        /**
+         * Updates foul/warning/medical status based on user input.
+         * Implements the logic: 3 Reminds -> 1 Warned, reset Remind.
+         * @param {'red' | 'blue'} team
+         * @param {'remind' | 'warned' | 'medical'} type
+         */
+        function updateFoul(team, type) {
+            if (type === 'remind') {
+                state.fouls[team].remind++;
+                if (state.fouls[team].remind >= REMIND_LIMIT) {
+                    state.fouls[team].warned++;
+                    state.fouls[team].remind = 0;
+                }
+            } else if (type === 'warned') {
+                state.fouls[team].warned++;
+            } else if (type === 'medical') {
+                state.fouls[team].medical++;
+            }
+            render();
+        }
+        
+        /**
+         * Resets ALL state variables to their initial/default values (score, timer, fouls).
+         */
+        function resetAll() {
+            if (confirm("Bạn có chắc chắn muốn ĐẶT LẠI TẤT CẢ trạng thái (điểm, thời gian, lỗi phạt) không?")) {
+                clearInterval(state.interval);
+                state.score = { red: 0, blue: 0 };
+                state.timer = DURATION_SECONDS; // Reset to 1:30
+                state.isRunning = false;
+                state.status = "Half-time";
+                state.fouls = {
+                    red: { remind: 0, warned: 0, medical: 0 },
+                    blue: { remind: 0, warned: 0, medical: 0 }
+                };
+                render();
+            }
+        }
+        
+        /**
+         * Allows user to edit match information (match number, category).
+         */
+        function editMatchInfo() {
+             const newMatchNumber = prompt("Nhập Số Trận (Match Number):", state.matchNumber);
+             if (newMatchNumber !== null && newMatchNumber.trim() !== "") {
+                 state.matchNumber = newMatchNumber;
+             }
+             
+             const newCategory = prompt("Nhập Hạng Cân/Nội Dung (Category):", state.category);
+             if (newCategory !== null && newCategory.trim() !== "") {
+                 state.category = newCategory;
+             }
+             render();
+        }
+
+
+        // --- KEYBOARD SHORTCUT IMPLEMENTATION ---
+        document.addEventListener('keydown', (event) => {
+            // Prevent default browser behavior for F-keys and key shortcuts
+            if (event.key.startsWith('F') || event.ctrlKey) {
+                 event.preventDefault();
+            }
+
+            // Ignore input/textarea fields
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // Determine team based on Control key status
+            const team = event.ctrlKey ? 'blue' : 'red';
+            
+            // Check for F-keys first (Scores and Timer)
+            switch(event.key) {
+                case 'F1':
+                    toggleTimer();
+                    break;
+                case 'F2':
+                    resetTimer();
+                    break;
+                case 'F3':
+                    toggleStatus();
+                    break;
+                case 'F4': // + Red Score
+                    increaseScore('red');
+                    break;
+                case 'F5': // - Red Score
+                    decreaseScore('red');
+                    break;
+                case 'F6': // + Blue Score
+                    increaseScore('blue');
+                    break;
+                case 'F7': // - Blue Score
+                    decreaseScore('blue');
+                    break;
+                case 'F10': // NEW: Reset All
+                    resetAll();
+                    break;
+            }
+
+            // Check for R, W, M keys (Fouls/Remind/Medical)
+            if (!event.ctrlKey) { // Red Team (No Control Key)
+                switch(event.key.toUpperCase()) {
+                    case 'R':
+                        updateFoul('red', 'remind');
+                        break;
+                    case 'W':
+                        updateFoul('red', 'warned');
+                        break;
+                    case 'M':
+                        updateFoul('red', 'medical');
+                        break;
+                }
+            } else { // Blue Team (With Control Key)
+                switch(event.key.toUpperCase()) {
+                    case 'R':
+                        updateFoul('blue', 'remind');
+                        break;
+                    case 'W':
+                        updateFoul('blue', 'warned');
+                        break;
+                    case 'M':
+                        updateFoul('blue', 'medical');
+                        break;
+                }
+            }
+        });
+
+
+        // Initial setup on load
+        window.onload = () => {
+            // Gán sự kiện cho các nút mới
+            $('reset-all-btn').addEventListener('click', resetAll);
+            $('edit-btn').addEventListener('click', editMatchInfo);
+            
+            // Render ban đầu để hiển thị trạng thái
+            render();
+        };
+
+    </script>
+</body>
+</html>
