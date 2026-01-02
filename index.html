@@ -3,62 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Remote Control</title>
+    <title>Vovinam Professional Scoreboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: sans-serif; }
+        body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
         
-        /* Giao diện Remote: Chia 2 cột Đỏ - Xanh */
-        .remote-button {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 5rem; /* Tăng kích thước số */
-            font-weight: 900;
-            border: 2px solid #000;
-            touch-action: manipulation;
-        }
-        .bg-red-score { background-color: #cc0000; }
-        .bg-blue-score { background-color: #0000cc; }
-        .remote-button:active { opacity: 0.6; transform: scale(0.98); }
+        /* GIAO DIỆN MÁY TÍNH (GIỐNG ẢNH THI ĐẤU) */
+        #desktop-ui { display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box; }
+        .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
         
-        #remote-ui { display: none; height: 100vh; flex-direction: row; } /* Chuyển sang hàng ngang để chia 2 cột */
-        #desktop-ui { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .main-score-area { display: flex; flex: 1; margin-top: 20px; position: relative; gap: 10px; }
+        .score-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 10px; position: relative; }
+        .bg-red { background-color: #e11d48; }
+        .bg-blue { background-color: #2563eb; }
+        .display-score { font-size: 20rem; font-weight: 900; line-height: 1; }
         
-        .large-score { font-size: 12rem; font-weight: 900; }
+        .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #eee; color: #000; padding: 10px 40px; border-radius: 5px; text-align: center; min-width: 250px; z-index: 10; }
+        .timer-label { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; }
+        .timer-digits { font-size: 4rem; font-weight: bold; font-family: monospace; }
+
+        .break-time-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); border: 4px solid #facc15; padding: 20px 50px; font-size: 3rem; color: #facc15; font-weight: bold; z-index: 20; border-radius: 10px; display: none; }
+
+        .foul-footer { display: flex; justify-content: space-between; padding: 20px 50px; background: #111; border-top: 4px solid #333; }
+        .foul-item { font-size: 1.5rem; font-weight: bold; }
+        .foul-val { color: #facc15; margin-left: 10px; }
+
+        /* GIAO DIỆN ĐIỀU KHIỂN (CHO ĐIỆN THOẠI) */
+        #remote-ui { display: none; height: 100vh; flex-direction: row; padding: 10px; gap: 10px; }
+        .remote-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 5rem; font-weight: 900; border-radius: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="remote-ui" class="p-2 gap-2">
-        <div class="flex flex-col flex-1 gap-2">
-            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 1)">+1</div>
-            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 2)">+2</div>
+    <div id="desktop-ui">
+        <div class="header-title">THE 7TH WVVF WORLD VOVINAM CHAMPIONSHIPS 2023</div>
+        
+        <div class="flex justify-between px-10 mt-4 text-xl font-bold">
+            <div>Match: 21</div>
+            <div>Final - 72kg Male</div>
         </div>
 
-        <div class="flex flex-col flex-1 gap-2">
-            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 1)">+1</div>
-            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 2)">+2</div>
+        <div class="main-score-area">
+            <div class="timer-container">
+                <div id="round-label" class="timer-label">Round 1</div>
+                <div id="timer-display" class="timer-digits">01:30</div>
+            </div>
+
+            <div id="break-overlay" class="break-time-overlay">BREAK TIME</div>
+
+            <div class="score-box bg-red">
+                <div id="red-score" class="display-score">0</div>
+                <div class="text-3xl font-bold uppercase mt-4">VÕ SĨ ĐỎ</div>
+            </div>
+
+            <div class="score-box bg-blue">
+                <div id="blue-score" class="display-score">0</div>
+                <div class="text-3xl font-bold uppercase mt-4">VÕ SĨ XANH</div>
+            </div>
+        </div>
+
+        <div class="foul-footer">
+            <div class="space-y-2">
+                <div class="foul-item">Remind: <span id="red-remind" class="foul-val">0</span></div>
+                <div class="foul-item">Warned: <span id="red-warned" class="foul-val">0</span></div>
+                <div class="foul-item">Medical: <span id="red-medical" class="foul-val">0</span></div>
+            </div>
+            <div class="text-center self-center text-gray-500 text-sm">
+                F1: Start/Pause | R/W/M: Foul Red | Ctrl+R/W/M: Foul Blue
+            </div>
+            <div class="space-y-2 text-right">
+                <div class="foul-item">Remind: <span id="blue-remind" class="foul-val">0</span></div>
+                <div class="foul-item">Warned: <span id="blue-warned" class="foul-val">0</span></div>
+                <div class="foul-item">Medical: <span id="blue-medical" class="foul-val">0</span></div>
+            </div>
         </div>
     </div>
 
-    <div id="desktop-ui">
-        <div class="w-full max-w-5xl border-8 border-red-600 p-10 bg-black rounded-3xl text-center shadow-[0_0_50px_rgba(255,0,0,0.4)]">
-            <h1 class="text-4xl font-bold text-yellow-500 mb-10 uppercase">Bảng Điểm Vovinam Online</h1>
-            <div class="flex justify-around items-center">
-                <div class="text-red-600">
-                    <p class="text-2xl font-bold uppercase">Đội Đỏ</p>
-                    <div id="red-score" class="large-score">0</div>
-                </div>
-                <div class="text-blue-600">
-                    <p class="text-2xl font-bold uppercase">Đội Xanh</p>
-                    <div id="blue-score" class="large-score">0</div>
-                </div>
-            </div>
-            <div class="mt-10">
-                <button onclick="resetAll()" class="bg-gray-700 px-6 py-2 rounded-lg text-sm">RESET ĐIỂM</button>
-            </div>
+    <div id="remote-ui">
+        <div class="remote-col">
+            <div class="btn-remote bg-red" onclick="updateScore('red', 1)">+1</div>
+            <div class="btn-remote bg-red" onclick="updateScore('red', 2)">+2</div>
+        </div>
+        <div class="remote-col">
+            <div class="btn-remote bg-blue" onclick="updateScore('blue', 1)">+1</div>
+            <div class="btn-remote bg-blue" onclick="updateScore('blue', 2)">+2</div>
         </div>
     </div>
 
@@ -66,7 +95,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // Cấu hình Firebase của bạn
         const firebaseConfig = {
             apiKey: "AIzaSyB2l67XVpiSnzdjWj7-9Nr8UCOXW9XKVnk",
             authDomain: "vovinam-online.firebaseapp.com",
@@ -74,44 +102,127 @@
             projectId: "vovinam-online",
             storageBucket: "vovinam-online.firebasestorage.app",
             messagingSenderId: "554190803446",
-            appId: "1:554190803446:web:fe9c66dfcbb8b96d9a37d7",
-            measurementId: "G-8L6D9VMHR9"
+            appId: "1:554190803446:web:fe9c66dfcbb8b96d9a37d7"
         };
 
         firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const scoreRef = database.ref('match_score');
+        const db = firebase.database().ref('vovinam_pro');
 
-        let currentScore = { red: 0, blue: 0 };
+        let state = {
+            redScore: 0, blueScore: 0,
+            redFouls: { remind: 0, warned: 0, medical: 0 },
+            blueFouls: { remind: 0, warned: 0, medical: 0 },
+            timer: 90, isRunning: false, round: 1, isBreak: false
+        };
 
-        // Tự động nhận diện thiết bị điện thoại
+        // Nhận diện thiết bị
         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
         }
 
-        // Lắng nghe dữ liệu đồng bộ
-        scoreRef.on('value', (snapshot) => {
-            const data = snapshot.val();
+        // ĐỒNG BỘ FIREBASE
+        db.on('value', (snap) => {
+            const data = snap.val();
             if (data) {
-                currentScore = data;
-                document.getElementById('red-score').innerText = data.red;
-                document.getElementById('blue-score').innerText = data.blue;
+                state = data;
+                render();
             }
         });
 
-        // Hàm cộng điểm
-        function updateScore(team, points) {
-            if (team === 'red') currentScore.red += points;
-            else currentScore.blue += points;
-            scoreRef.set(currentScore);
+        function render() {
+            document.getElementById('red-score').innerText = state.redScore;
+            document.getElementById('blue-score').innerText = state.blueScore;
+            document.getElementById('timer-display').innerText = formatTime(state.timer);
+            document.getElementById('red-remind').innerText = state.redFouls.remind;
+            document.getElementById('red-warned').innerText = state.redFouls.warned;
+            document.getElementById('red-medical').innerText = state.redFouls.medical;
+            document.getElementById('blue-remind').innerText = state.blueFouls.remind;
+            document.getElementById('blue-warned').innerText = state.blueFouls.warned;
+            document.getElementById('blue-medical').innerText = state.blueFouls.medical;
+            
+            document.getElementById('round-label').innerText = state.isBreak ? "Half-time" : `Round ${state.round}`;
+            document.getElementById('break-overlay').style.display = state.isBreak ? 'block' : 'none';
         }
 
-        function resetAll() {
-            if(confirm("Bạn muốn đưa điểm về 0?")) {
-                scoreRef.set({ red: 0, blue: 0 });
-            }
+        function formatTime(s) {
+            let m = Math.floor(s / 60);
+            let sec = s % 60;
+            return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
+
+        // LOGIC THỜI GIAN
+        setInterval(() => {
+            if (state.isRunning && state.timer > 0) {
+                state.timer--;
+                db.child('timer').set(state.timer);
+            } else if (state.isRunning && state.timer === 0) {
+                handleTimerEnd();
+            }
+        }, 1000);
+
+        function handleTimerEnd() {
+            if (state.round === 1 && !state.isBreak) {
+                state.isBreak = true;
+                state.timer = 45; // Nghỉ 45 giây
+            } else if (state.isBreak) {
+                state.isBreak = false;
+                state.round = 2;
+                state.timer = 90; // Hiệp 2 - 1:30 giây
+            } else {
+                state.isRunning = false;
+            }
+            db.set(state);
+        }
+
+        // ĐIỀU KHIỂN
+        function updateScore(team, val) {
+            if (team === 'red') state.redScore = Math.max(0, state.redScore + val);
+            else state.blueScore = Math.max(0, state.blueScore + val);
+            db.set(state);
+        }
+
+        function addFoul(team, type) {
+            let target = team === 'red' ? state.redFouls : state.blueFouls;
+            if (type === 'remind') {
+                target.remind++;
+                if (target.remind >= 3) {
+                    target.warned++;
+                    target.remind = 0;
+                }
+            } else {
+                target[type]++;
+            }
+            db.set(state);
+        }
+
+        // PHÍM TẮT BÀN PHÍM
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            const isCtrl = e.ctrlKey;
+            const key = e.key.toUpperCase();
+
+            if (e.key === 'F1') { state.isRunning = !state.isRunning; db.set(state); }
+            if (e.key === 'F2') updateScore('red', 1);
+            if (e.key === 'F3') updateScore('red', -1);
+            if (e.key === 'F4') updateScore('blue', 1);
+            if (e.key === 'F6') updateScore('blue', -1);
+            
+            const team = isCtrl ? 'blue' : 'red';
+            if (key === 'R') addFoul(team, 'remind');
+            if (key === 'W') addFoul(team, 'warned');
+            if (key === 'M') addFoul(team, 'medical');
+            
+            // Phím tắt phụ cho Reset
+            if (e.key === 'Escape') {
+                if(confirm("Reset toàn bộ?")) db.set({
+                    redScore: 0, blueScore: 0,
+                    redFouls: { remind: 0, warned: 0, medical: 0 },
+                    blueFouls: { remind: 0, warned: 0, medical: 0 },
+                    timer: 90, isRunning: false, round: 1, isBreak: false
+                });
+            }
+        });
     </script>
 </body>
 </html>
