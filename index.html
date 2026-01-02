@@ -7,13 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: sans-serif; }
-        /* Giao diện Remote cho điện thoại */
+        
+        /* Giao diện Remote: Chia 2 cột Đỏ - Xanh */
         .remote-button {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 3rem;
+            font-size: 5rem; /* Tăng kích thước số */
             font-weight: 900;
             border: 2px solid #000;
             touch-action: manipulation;
@@ -22,26 +23,24 @@
         .bg-blue-score { background-color: #0000cc; }
         .remote-button:active { opacity: 0.6; transform: scale(0.98); }
         
-        /* Ẩn hiện giữa Remote và Bảng điểm */
-        #remote-ui { display: none; height: 100vh; flex-direction: column; }
+        #remote-ui { display: none; height: 100vh; flex-direction: row; } /* Chuyển sang hàng ngang để chia 2 cột */
         #desktop-ui { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        /* Hiển thị bảng điểm trên máy tính */
         .large-score { font-size: 12rem; font-weight: 900; }
     </style>
 </head>
 <body>
 
     <div id="remote-ui" class="p-2 gap-2">
-        <div class="flex flex-1 gap-2">
-            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 1)">ĐỎ +1</div>
-            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 2)">ĐỎ +2</div>
+        <div class="flex flex-col flex-1 gap-2">
+            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 1)">+1</div>
+            <div class="remote-button bg-red-score rounded-xl" onclick="updateScore('red', 2)">+2</div>
         </div>
-        <div class="flex flex-1 gap-2">
-            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 1)">XANH +1</div>
-            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 2)">XANH +2</div>
+
+        <div class="flex flex-col flex-1 gap-2">
+            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 1)">+1</div>
+            <div class="remote-button bg-blue-score rounded-xl" onclick="updateScore('blue', 2)">+2</div>
         </div>
-        <button onclick="location.reload()" class="bg-gray-800 py-2 rounded-lg text-xs opacity-50">Làm mới kết nối</button>
     </div>
 
     <div id="desktop-ui">
@@ -59,7 +58,6 @@
             </div>
             <div class="mt-10">
                 <button onclick="resetAll()" class="bg-gray-700 px-6 py-2 rounded-lg text-sm">RESET ĐIỂM</button>
-                <p class="mt-4 text-gray-500 text-xs">Mở link này trên điện thoại để hiện 4 nút bấm</p>
             </div>
         </div>
     </div>
@@ -86,13 +84,13 @@
 
         let currentScore = { red: 0, blue: 0 };
 
-        // Tự động nhận diện thiết bị
+        // Tự động nhận diện thiết bị điện thoại
         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
         }
 
-        // Lắng nghe dữ liệu
+        // Lắng nghe dữ liệu đồng bộ
         scoreRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -102,7 +100,7 @@
             }
         });
 
-        // Hàm cộng điểm (+1 hoặc +2)
+        // Hàm cộng điểm
         function updateScore(team, points) {
             if (team === 'red') currentScore.red += points;
             else currentScore.blue += points;
