@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Full Screen Edition</title>
+    <title>Vovinam Pro - RF Fixed Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -16,24 +16,19 @@
         .display-score { font-size: 24rem; font-weight: 900; line-height: 0.7; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
-        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; }
-        .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; }
-        .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; }
+        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: background 0.2s; }
+        .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; border-color: #fff; }
+        .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; border-color: #fff; }
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
         .foul-box { width: 95%; display: flex; justify-content: space-around; align-items: center; padding: 15px 0; border-top: 2px solid rgba(255,255,255,0.2); position: absolute; bottom: 0; background: rgba(0,0,0,0.1); }
         .foul-item { display: flex; flex-direction: column; align-items: center; }
         .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; }
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
-        
-        /* GIAO DIỆN REMOTE ĐIỆN THOẠI */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
         .remote-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #111; border-bottom: 2px solid #333; }
         .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
-        
-        /* Nút Full Screen chung */
         .fs-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; border: 1px solid #555; }
-        .fs-btn:active { background: #555; }
     </style>
 </head>
 <body>
@@ -83,7 +78,7 @@
             </div>
         </div>
         <div class="flex justify-between items-center px-4 py-1">
-            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: Điểm | F6: Reset | F11: Full Screen</div>
+            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen</div>
             <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
     </div>
@@ -142,26 +137,54 @@
             }
         });
 
+        // RF gửi phiếu: kèm flag used để biết phiếu đã tính điểm chưa
         function sendVote(team, points) {
             if (!myJudgeId || myJudgeId > 5) return;
-            db.child(`votes/${team}_p${points}/${myJudgeId}`).set(Date.now());
+            db.child(`votes/${team}_p${points}/${myJudgeId}`).set({
+                t: Date.now(),
+                used: false
+            });
         }
 
+        // Logic xử lý phiếu (Chỉ chạy trên máy tính)
         function processVotes() {
             const now = Date.now();
+            const timeLimit = 3000; // 3 giây đèn sáng và chờ phiếu
+
             ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
                 const groupVotes = state.votes[group];
                 if (!groupVotes) return;
+
                 let validJudges = [];
                 Object.keys(groupVotes).forEach(jId => {
-                    if (now - groupVotes[jId] < 3000) validJudges.push(jId);
-                    else db.child(`votes/${group}/${jId}`).remove();
+                    const vote = groupVotes[jId];
+                    const timestamp = (typeof vote === 'object') ? vote.t : vote;
+                    const isUsed = (typeof vote === 'object') ? vote.used : false;
+
+                    if (now - timestamp < timeLimit) {
+                        if (!isUsed) validJudges.push(jId);
+                    } else {
+                        // Tự động xóa phiếu sau 3 giây để sạch DB
+                        db.child(`votes/${group}/${jId}`).remove();
+                    }
                 });
+
+                // Nếu có từ 2 người trở lên cùng bấm và chưa được tính điểm
                 if (validJudges.length >= 2) {
                     const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
                     const points = group.includes('_p1') ? 1 : 2;
-                    db.child(`votes/${group}`).remove(); 
+                    
+                    // 1. Cộng điểm thật
                     db.child(teamKey).set((state[teamKey] || 0) + points);
+
+                    // 2. Đánh dấu các phiếu này đã dùng (KHÔNG XÓA để đèn vẫn sáng đủ 3s)
+                    validJudges.forEach(jId => {
+                        const originalTS = (typeof groupVotes[jId] === 'object') ? groupVotes[jId].t : groupVotes[jId];
+                        db.child(`votes/${group}/${jId}`).set({
+                            t: originalTS,
+                            used: true
+                        });
+                    });
                 }
             });
         }
@@ -196,8 +219,17 @@
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
-                    if (state.votes[`${side}_p1`]?.[i] && (now - state.votes[`${side}_p1`][i] < 3000)) el.classList.add('rf-active-1');
-                    if (state.votes[`${side}_p2`]?.[i] && (now - state.votes[`${side}_p2`][i] < 3000)) el.classList.add('rf-active-2');
+                    
+                    // Kiểm tra cả 2 loại điểm để sáng đèn
+                    [1, 2].forEach(p => {
+                        const vote = state.votes[`${side}_p${p}`] ? state.votes[`${side}_p${p}`][i] : null;
+                        if (vote) {
+                            const ts = (typeof vote === 'object') ? vote.t : vote;
+                            if (now - ts < 3000) {
+                                el.classList.add(p === 1 ? 'rf-active-1' : 'rf-active-2');
+                            }
+                        }
+                    });
                 });
             }
         }
@@ -208,12 +240,15 @@
         }
 
         function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-                });
+            const doc = window.document;
+            const docEl = doc.documentElement;
+            const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancel = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                request.call(docEl);
             } else {
-                if (document.exitFullscreen) document.exitFullscreen();
+                cancel.call(doc);
             }
         }
 
