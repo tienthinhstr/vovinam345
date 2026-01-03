@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Professional Scoreboard - Pro Layout</title>
+    <title>Vovinam Professional Scoreboard - Pro Layout Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -13,10 +13,12 @@
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; }
         
         .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 5px; }
-        .score-box { flex: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; position: relative; padding: 20px 0; }
+        .score-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 5px; position: relative; padding: 0; }
         .bg-red { background-color: #e11d48; }
         .bg-blue { background-color: #2563eb; }
-        .display-score { font-size: 20rem; font-weight: 900; line-height: 0.8; margin-top: 40px; }
+        
+        /* CHỈNH ĐIỂM SỐ VÀO GIỮA */
+        .display-score { font-size: 24rem; font-weight: 900; line-height: 0.7; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
         /* RF PANEL SÁT BIÊN */
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
@@ -29,11 +31,11 @@
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
 
-        /* PHẦN LỖI (FOUL) - ĐƯA LÊN CAO THEO ẢNH SỐ 2 */
-        .foul-box { width: 90%; display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 10px; border-top: 1px solid rgba(255,255,255,0.2); margin-top: 20px; }
+        /* PHẦN LỖI (FOUL) - ĐẶT Ở ĐÁY KHỐI ĐIỂM */
+        .foul-box { width: 95%; display: flex; justify-content: space-around; align-items: center; padding: 15px 0; border-top: 2px solid rgba(255,255,255,0.2); position: absolute; bottom: 0; background: rgba(0,0,0,0.1); }
         .foul-item { display: flex; flex-direction: column; align-items: center; }
-        .foul-label { font-size: 0.9rem; text-transform: uppercase; opacity: 0.9; font-weight: bold; }
-        .foul-number { font-size: 1.8rem; font-weight: 900; color: #fff; }
+        .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; letter-spacing: 1px; }
+        .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
 
         /* GIAO DIỆN ĐIỆN THOẠI */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
@@ -67,7 +69,6 @@
 
             <div class="score-box bg-red">
                 <div id="red-score" class="display-score">0</div>
-                <div class="text-3xl font-bold uppercase tracking-widest mt-4">VÕ SĨ ĐỎ</div>
                 
                 <div class="foul-box">
                     <div class="foul-item">
@@ -87,7 +88,6 @@
 
             <div class="score-box bg-blue">
                 <div id="blue-score" class="display-score">0</div>
-                <div class="text-3xl font-bold uppercase tracking-widest mt-4">VÕ SĨ XANH</div>
 
                 <div class="foul-box">
                     <div class="foul-item">
@@ -115,8 +115,8 @@
             </div>
         </div>
 
-        <div class="text-center text-gray-600 text-[10px] py-1 uppercase tracking-tighter">
-            F1: Start/Pause | F6: Reset All | Judge Delay: 3s | Sync Online Active
+        <div class="text-center text-gray-700 text-[10px] py-1 uppercase tracking-tighter">
+            System Online | Judge Delay: 3s | F1: Start-Pause | F6: Reset
         </div>
     </div>
 
@@ -159,7 +159,7 @@
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
             db.child('active_judges').transaction(c => (c || 0) + 1, (err, comm, snap) => {
-                myJudgeId = snap.val();
+                myJudgeId = snapshot.val();
                 document.getElementById('judge-id-display').innerText = myJudgeId;
             });
         }
@@ -204,7 +204,6 @@
             document.getElementById('blue-score').innerText = state.blueScore || 0;
             document.getElementById('timer-display').innerText = formatTime(state.timer);
             
-            // Render Fouls
             document.getElementById('red-remind').innerText = state.redFouls?.remind || 0;
             document.getElementById('red-warned').innerText = state.redFouls?.warned || 0;
             document.getElementById('red-medical').innerText = state.redFouls?.medical || 0;
@@ -239,7 +238,6 @@
             setInterval(render, 500);
         }
 
-        // Keyboard Fouls
         function addFoul(team, type) {
             let fouls = team === 'red' ? state.redFouls : state.blueFouls;
             if (!fouls) fouls = {remind:0, warned:0, medical:0};
