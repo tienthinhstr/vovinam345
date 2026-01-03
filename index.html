@@ -154,7 +154,8 @@
                 if (!groupVotes) return;
                 let validJudges = [];
                 Object.keys(groupVotes).forEach(jId => {
-                    if (now - groupVotes[jId] < 3000) validJudges.push(jId);
+                    // ĐÃ SỬA: Thay 3000ms thành 2000ms (2 giây)
+                    if (now - groupVotes[jId] < 2000) validJudges.push(jId);
                     else db.child(`votes/${group}/${jId}`).remove();
                 });
                 if (validJudges.length >= 2) {
@@ -196,8 +197,9 @@
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
-                    if (state.votes[`${side}_p1`]?.[i] && (now - state.votes[`${side}_p1`][i] < 3000)) el.classList.add('rf-active-1');
-                    if (state.votes[`${side}_p2`]?.[i] && (now - state.votes[`${side}_p2`][i] < 3000)) el.classList.add('rf-active-2');
+                    // ĐÃ SỬA: Thay 3000ms thành 2000ms để đồng bộ đèn hiển thị
+                    if (state.votes[`${side}_p1`]?.[i] && (now - state.votes[`${side}_p1`][i] < 2000)) el.classList.add('rf-active-1');
+                    if (state.votes[`${side}_p2`]?.[i] && (now - state.votes[`${side}_p2`][i] < 2000)) el.classList.add('rf-active-2');
                 });
             }
         }
