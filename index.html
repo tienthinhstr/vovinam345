@@ -25,11 +25,15 @@
         .foul-item { display: flex; flex-direction: column; align-items: center; }
         .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; }
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+        
+        /* GIAO DIỆN REMOTE ĐIỆN THOẠI */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
+        .remote-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #111; border-bottom: 2px solid #333; }
         .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
-        /* Nút Full Screen */
-        .fs-btn { position: absolute; bottom: 10px; right: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 10px; opacity: 0.3; transition: 0.3s; cursor: pointer; border: none; }
-        .fs-btn:hover { opacity: 1; }
+        
+        /* Nút Full Screen chung */
+        .fs-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; border: 1px solid #555; }
+        .fs-btn:active { background: #555; }
     </style>
 </head>
 <body>
@@ -78,15 +82,18 @@
                 <div class="rf-row"><div id="rf-blue-5" class="rf-indicator"></div><span>5</span></div>
             </div>
         </div>
-        <div class="text-center text-gray-700 text-[10px] py-1 uppercase tracking-tighter">
-            F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen | R/W/M: Lỗi (Alt để trừ)
+        <div class="flex justify-between items-center px-4 py-1">
+            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: Điểm | F6: Reset | F11: Full Screen</div>
+            <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
-        <button class="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</button>
     </div>
 
-    <div id="remote-ui" class="p-2">
-        <div class="text-center py-2 text-yellow-400 font-bold border-b border-gray-800 mb-2">RF: <span id="judge-id-display">?</span></div>
-        <div class="flex flex-1 gap-2">
+    <div id="remote-ui">
+        <div class="remote-header">
+            <h2 class="text-lg font-bold text-yellow-400 uppercase">RF: <span id="judge-id-display">?</span></h2>
+            <button class="fs-btn" onclick="toggleFullScreen()">TOÀN MÀN HÌNH</button>
+        </div>
+        <div class="flex flex-1 p-2 gap-2">
             <div class="flex flex-col flex-1 gap-2">
                 <div class="btn-remote bg-red" onclick="sendVote('red', 1)">+1</div>
                 <div class="btn-remote bg-red" onclick="sendVote('red', 2)">+2</div>
@@ -161,14 +168,9 @@
 
         function handleTimerEnd() {
             if (state.round === 1 && !state.isBreak) {
-                state.isBreak = true;
-                state.timer = 45;
-                state.isRunning = true; 
+                state.isBreak = true; state.timer = 45; state.isRunning = true; 
             } else if (state.isBreak) {
-                state.isBreak = false;
-                state.round = 2;
-                state.timer = 90;
-                state.isRunning = false; 
+                state.isBreak = false; state.round = 2; state.timer = 90; state.isRunning = false; 
             } else {
                 state.isRunning = false;
             }
@@ -201,8 +203,7 @@
         }
 
         function formatTime(s) {
-            let m = Math.floor(s / 60);
-            let sec = s % 60;
+            let m = Math.floor(s / 60); let sec = s % 60;
             return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
@@ -212,19 +213,14 @@
                     console.error(`Error attempting to enable full-screen mode: ${err.message}`);
                 });
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
         if (!isMobile) {
             setInterval(() => {
-                if (state.isRunning && state.timer > 0) {
-                    db.child('timer').set(state.timer - 1);
-                } else if (state.isRunning && state.timer === 0) {
-                    handleTimerEnd();
-                }
+                if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
+                else if (state.isRunning && state.timer === 0) handleTimerEnd();
             }, 1000);
             setInterval(render, 500);
         }
@@ -232,28 +228,21 @@
         function updateFoul(team, type, isDecrease) {
             let fouls = team === 'red' ? state.redFouls : state.blueFouls;
             if (!fouls) fouls = {remind:0, warned:0, medical:0};
-            if (isDecrease) {
-                fouls[type] = Math.max(0, fouls[type] - 1);
-            } else {
+            if (isDecrease) fouls[type] = Math.max(0, fouls[type] - 1);
+            else {
                 if (type === 'remind') {
                     fouls.remind++;
                     if (fouls.remind >= 3) { fouls.warned++; fouls.remind = 0; }
-                } else { fouls[type]++; }
+                } else fouls[type]++;
             }
             db.child(team + 'Fouls').set(fouls);
         }
 
         document.addEventListener('keydown', (e) => {
-            // KHÓA CÁC PHÍM CHỨC NĂNG CỦA TRÌNH DUYỆT (F1-F12, Ctrl+R, v.v.)
             const blockedKeys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
-            if (blockedKeys.includes(e.key) || (e.ctrlKey && ['R','S','P','F'].includes(e.key.toUpperCase()))) {
-                e.preventDefault();
-            }
+            if (blockedKeys.includes(e.key) || (e.ctrlKey && ['R','S','P','F'].includes(e.key.toUpperCase()))) e.preventDefault();
 
-            const isCtrl = e.ctrlKey;
-            const isAlt = e.altKey;
-            const key = e.key.toUpperCase();
-
+            const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F2') db.child('redScore').set((state.redScore || 0) + 1);
             if (e.key === 'F3') db.child('redScore').set(Math.max(0, (state.redScore || 0) - 1));
