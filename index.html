@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Professional Scoreboard - 5 Judges</title>
+    <title>Vovinam Professional Scoreboard - 3s Logic</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
         
-        /* GIAO DIỆN MÁY TÍNH */
         #desktop-ui { display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box; }
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
         
@@ -21,24 +20,22 @@
         /* PHẦN RF 1-5 */
         .rf-panel { width: 120px; display: flex; flex-direction: column; justify-content: center; gap: 15px; font-size: 1.8rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
-        .rf-indicator { width: 30px; height: 30px; border: 2px solid #555; border-radius: 4px; background: #222; }
-        .rf-active-1 { background-color: #facc15; border-color: #fff; box-shadow: 0 0 15px #facc15; } /* Điểm 1 - Vàng */
-        .rf-active-2 { background-color: #38bdf8; border-color: #fff; box-shadow: 0 0 15px #38bdf8; } /* Điểm 2 - Xanh dương */
+        .rf-indicator { width: 30px; height: 30px; border: 2px solid #555; border-radius: 4px; background: #222; transition: all 0.2s; }
+        .rf-active-1 { background-color: #facc15; border-color: #fff; box-shadow: 0 0 15px #facc15; }
+        .rf-active-2 { background-color: #38bdf8; border-color: #fff; box-shadow: 0 0 15px #38bdf8; }
 
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #eee; color: #000; padding: 5px 40px; border-radius: 5px; text-align: center; min-width: 200px; z-index: 10; }
-        .timer-label { font-size: 1rem; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; }
 
         .foul-footer { display: flex; justify-content: space-between; padding: 10px 50px; background: #111; border-top: 4px solid #333; }
-        .foul-item { font-size: 1.2rem; font-weight: bold; }
-        .foul-val { color: #facc15; margin-left: 10px; }
+        .foul-val { color: #facc15; font-weight: bold; }
 
-        /* GIAO DIỆN ĐIỀU KHIỂN (CHO ĐIỆN THOẠI) */
+        /* GIAO DIỆN ĐIỀU KHIỂN */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #111; }
-        .remote-header { background: #222; padding: 15px; text-align: center; border-bottom: 2px solid #facc15; }
+        .remote-header { background: #222; padding: 10px; text-align: center; border-bottom: 2px solid #facc15; }
         .remote-main { flex: 1; display: flex; flex-direction: row; padding: 10px; gap: 10px; }
         .remote-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; border: 4px solid rgba(0,0,0,0.3); }
+        .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; active:scale-95 transition: transform 0.1s; }
     </style>
 </head>
 <body>
@@ -46,11 +43,6 @@
     <div id="desktop-ui">
         <div class="header-title">HO CHI MINH CITY CADRE ACADEMY</div>
         
-        <div class="flex justify-between px-10 mt-2 text-lg font-bold">
-            <div>Match: 21</div>
-            <div>Final - 72kg Male</div>
-        </div>
-
         <div class="main-score-area">
             <div class="rf-panel items-start">
                 <div class="text-yellow-500 mb-2">RF</div>
@@ -62,7 +54,7 @@
             </div>
 
             <div class="timer-container">
-                <div id="round-label" class="timer-label">Round 1</div>
+                <div id="round-label" class="text-sm font-bold uppercase border-bottom">Round 1</div>
                 <div id="timer-display" class="timer-digits">01:30</div>
             </div>
 
@@ -87,25 +79,15 @@
         </div>
 
         <div class="foul-footer">
-            <div class="space-y-1">
-                <div class="foul-item">Remind: <span id="red-remind" class="foul-val">0</span></div>
-                <div class="foul-item">Warned: <span id="red-warned" class="foul-val">0</span></div>
-                <div class="foul-item">Medical: <span id="red-medical" class="foul-val">0</span></div>
-            </div>
-            <div class="text-center self-center text-gray-500 text-xs italic">
-                Cơ chế giám định: Cần ít nhất 2 giám định cùng bấm trong 5 giây để cộng điểm.
-            </div>
-            <div class="space-y-1 text-right">
-                <div class="foul-item">Remind: <span id="blue-remind" class="foul-val">0</span></div>
-                <div class="foul-item">Warned: <span id="blue-warned" class="foul-val">0</span></div>
-                <div class="foul-item">Medical: <span id="blue-medical" class="foul-val">0</span></div>
-            </div>
+            <div class="text-left text-lg">Remind: <span id="red-remind" class="foul-val">0</span> | Warned: <span id="red-warned" class="foul-val">0</span></div>
+            <div class="text-center text-gray-500 text-xs uppercase">Độ trễ: 3 giây | Quy tắc: 2/5 RF</div>
+            <div class="text-right text-lg">Warned: <span id="blue-warned" class="foul-val">0</span> | Remind: <span id="blue-remind" class="foul-val">0</span></div>
         </div>
     </div>
 
     <div id="remote-ui">
         <div class="remote-header">
-            <h2 class="text-xl font-bold text-yellow-400">GIÁM ĐỊNH SỐ: <span id="judge-id-display">...</span></h2>
+            <h2 class="text-xl font-bold text-yellow-400">GIÁM ĐỊNH RF: <span id="judge-id-display">...</span></h2>
         </div>
         <div class="remote-main">
             <div class="remote-col">
@@ -136,58 +118,39 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref('vovinam_pro');
         
-        // Trạng thái cục bộ
-        let state = {
-            redScore: 0, blueScore: 0,
-            redFouls: { remind: 0, warned: 0, medical: 0 },
-            blueFouls: { remind: 0, warned: 0, medical: 0 },
-            timer: 90, isRunning: false, round: 1, isBreak: false,
-            votes: {} // Lưu trữ phiếu bầu của giám định
-        };
-
+        let state = { redScore: 0, blueScore: 0, timer: 90, isRunning: false, votes: {} };
         let myJudgeId = null;
+        let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // KIỂM TRA THIẾT BỊ VÀ GÁN ID GIÁM ĐỊNH
-        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        if (isMobile) {
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
-            
-            // Tự động nhận số thứ tự Giám định (RF)
-            db.child('active_judges').transaction((current) => {
-                if (current === null) return 1;
-                if (current >= 5) return current; // Max 5 RF
-                return current + 1;
-            }, (error, committed, snapshot) => {
-                myJudgeId = snapshot.val();
+            db.child('active_judges').transaction(c => (c || 0) + 1, (err, comm, snap) => {
+                myJudgeId = snap.val();
                 document.getElementById('judge-id-display').innerText = myJudgeId;
             });
         }
 
-        // ĐỒNG BỘ DỮ LIỆU TỪ FIREBASE
         db.on('value', (snap) => {
             const data = snap.val();
             if (data) {
-                state = { ...state, ...data };
+                state = data;
                 if (!state.votes) state.votes = {};
-                processVotes(); // Xử lý logic 2/5 giám định
+                // QUAN TRỌNG: Chỉ máy tính (không có JudgeId) mới được xử lý điểm
+                if (!isMobile) processVotes(); 
                 render();
             }
         });
 
-        // HÀM GỬI PHIẾU BẦU (DÀNH CHO ĐIỆN THOẠI)
         function sendVote(team, points) {
-            if (!myJudgeId) return;
-            const votePath = `votes/${team}_p${points}/${myJudgeId}`;
-            db.child(votePath).set(Date.now());
-            
-            // Rung phản hồi (nếu thiết bị hỗ trợ)
-            if (navigator.vibrate) navigator.vibrate(50);
+            if (!myJudgeId || myJudgeId > 5) return;
+            // Gửi phiếu lên với thời gian hiện tại
+            db.child(`votes/${team}_p${points}/${myJudgeId}`).set(firebase.database.ServerValue.TIMESTAMP);
         }
 
-        // HÀM XỬ LÝ LOGIC BỎ PHIẾU (CHẠY TRÊN MÀN HÌNH CHÍNH)
         function processVotes() {
             const now = Date.now();
-            const delayLimit = 5000; // Độ trễ tối đa 5 giây
+            const delayLimit = 3000; // Giảm xuống 3 giây
 
             ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
                 const groupVotes = state.votes[group];
@@ -195,72 +158,45 @@
 
                 let validJudgeIds = [];
                 Object.keys(groupVotes).forEach(jId => {
-                    const timestamp = groupVotes[jId];
-                    // Nếu phiếu còn hiệu lực (trong vòng 5s)
-                    if (now - timestamp < delayLimit) {
+                    if (now - groupVotes[jId] < delayLimit) {
                         validJudgeIds.push(jId);
                     } else {
-                        // Xóa phiếu đã quá hạn
                         db.child(`votes/${group}/${jId}`).remove();
                     }
                 });
 
-                // QUY TẮC 2/5: Nếu có từ 2 giám định trở lên cùng chọn một loại điểm
+                // Nếu có 2 người trở lên cùng bấm
                 if (validJudgeIds.length >= 2) {
-                    const team = group.split('_')[0];
-                    const points = parseInt(group.split('_p')[1]);
+                    const team = group.includes('red') ? 'redScore' : 'blueScore';
+                    const points = group.includes('_p1') ? 1 : 2;
                     
-                    // Cộng điểm thật sự
-                    if (team === 'red') state.redScore += points;
-                    else state.blueScore += points;
-
-                    // Xóa các phiếu đã tính điểm thành công để tránh cộng lặp
-                    db.child(`votes/${group}`).remove();
-                    db.child('redScore').set(state.redScore);
-                    db.child('blueScore').set(state.blueScore);
+                    // Xóa phiếu trước khi cộng để tránh lặp (Tránh lỗi nhảy 2000 điểm)
+                    db.child(`votes/${group}`).remove(); 
+                    db.child(team).set(state[team] + points);
                 }
             });
         }
 
         function render() {
-            // Cập nhật điểm và thông số
             document.getElementById('red-score').innerText = state.redScore;
             document.getElementById('blue-score').innerText = state.blueScore;
             document.getElementById('timer-display').innerText = formatTime(state.timer);
-            document.getElementById('red-remind').innerText = state.redFouls.remind;
-            document.getElementById('red-warned').innerText = state.redFouls.warned;
-            document.getElementById('red-medical').innerText = state.redFouls.medical;
-            document.getElementById('blue-remind').innerText = state.blueFouls.remind;
-            document.getElementById('blue-warned').innerText = state.blueFouls.warned;
-            document.getElementById('blue-medical').innerText = state.blueFouls.medical;
-
-            // HIỂN THỊ ĐÈN RF (GIÁM ĐỊNH)
+            
             const now = Date.now();
             for (let i = 1; i <= 5; i++) {
-                resetIndicator(`rf-red-${i}`);
-                resetIndicator(`rf-blue-${i}`);
-
-                // Kiểm tra phiếu Đỏ
-                checkAndLightUp('red', 1, i, 'rf-active-1');
-                checkAndLightUp('red', 2, i, 'rf-active-2');
-                // Kiểm tra phiếu Xanh
-                checkAndLightUp('blue', 1, i, 'rf-active-1');
-                checkAndLightUp('blue', 2, i, 'rf-active-2');
-            }
-        }
-
-        function resetIndicator(id) {
-            const el = document.getElementById(id);
-            if (el) el.className = "rf-indicator";
-        }
-
-        function checkAndLightUp(team, points, judgeId, activeClass) {
-            const group = `${team}_p${points}`;
-            if (state.votes[group] && state.votes[group][judgeId]) {
-                const ts = state.votes[group][judgeId];
-                if (Date.now() - ts < 5000) {
-                    document.getElementById(`rf-${team}-${judgeId}`).classList.add(activeClass);
-                }
+                ['red', 'blue'].forEach(t => {
+                    const el = document.getElementById(`rf-${t}-${i}`);
+                    el.className = "rf-indicator"; // Reset đèn
+                    
+                    // Kiểm tra phiếu +1 (Vàng)
+                    if (state.votes[`${t}_p1`] && state.votes[`${t}_p1`][i]) {
+                        if (now - state.votes[`${t}_p1`][i] < 3000) el.classList.add('rf-active-1');
+                    }
+                    // Kiểm tra phiếu +2 (Xanh dương)
+                    if (state.votes[`${t}_p2`] && state.votes[`${t}_p2`][i]) {
+                        if (now - state.votes[`${t}_p2`][i] < 3000) el.classList.add('rf-active-2');
+                    }
+                });
             }
         }
 
@@ -270,26 +206,22 @@
             return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
-        // ĐỒNG HỒ VÀ PHÍM TẮT (GIỮ NGUYÊN NHƯ BẢN TRƯỚC)
-        setInterval(() => {
-            if (state.isRunning && state.timer > 0) {
-                state.timer--;
-                db.child('timer').set(state.timer);
-            }
-        }, 1000);
+        // Đồng hồ chỉ chạy trên máy tính
+        if (!isMobile) {
+            setInterval(() => {
+                if (state.isRunning && state.timer > 0) {
+                    db.child('timer').set(state.timer - 1);
+                }
+            }, 1000);
+        }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key.startsWith('F')) e.preventDefault();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F6') {
-                if(confirm("Reset trận đấu?")) {
-                    db.set({
-                        redScore: 0, blueScore: 0, timer: 90, isRunning: false, round: 1,
-                        active_judges: 0, votes: {},
-                        redFouls: { remind: 0, warned: 0, medical: 0 },
-                        blueFouls: { remind: 0, warned: 0, medical: 0 }
-                    });
-                }
+                if(confirm("Reset?")) db.set({
+                    redScore: 0, blueScore: 0, timer: 90, isRunning: false, 
+                    active_judges: 0, votes: {}, redFouls: {remind:0, warned:0}, blueFouls: {remind:0, warned:0}
+                });
             }
         });
     </script>
