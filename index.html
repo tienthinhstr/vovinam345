@@ -3,41 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Professional Scoreboard - Pro Layout Final</title>
+    <title>Vovinam Pro - Round Transition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
-        
-        /* GIAO DIỆN MÁY TÍNH CHUẨN */
         #desktop-ui { display: flex; flex-direction: column; height: 100vh; padding: 10px 20px; box-sizing: border-box; }
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; }
-        
         .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 5px; }
-        .score-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 5px; position: relative; padding: 0; }
+        .score-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 5px; position: relative; }
         .bg-red { background-color: #e11d48; }
         .bg-blue { background-color: #2563eb; }
-        
-        /* CHỈNH ĐIỂM SỐ VÀO GIỮA */
         .display-score { font-size: 24rem; font-weight: 900; line-height: 0.7; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        
-        /* RF PANEL SÁT BIÊN */
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
         .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; }
         .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; }
         .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; }
-
-        /* TIMER BOX */
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
-
-        /* PHẦN LỖI (FOUL) - ĐẶT Ở ĐÁY KHỐI ĐIỂM */
         .foul-box { width: 95%; display: flex; justify-content: space-around; align-items: center; padding: 15px 0; border-top: 2px solid rgba(255,255,255,0.2); position: absolute; bottom: 0; background: rgba(0,0,0,0.1); }
         .foul-item { display: flex; flex-direction: column; align-items: center; }
-        .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; letter-spacing: 1px; }
+        .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; }
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
-
-        /* GIAO DIỆN ĐIỆN THOẠI */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
         .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
     </style>
@@ -46,12 +33,10 @@
 
     <div id="desktop-ui">
         <div class="header-title">HO CHI MINH CITY CADRE ACADEMY</div>
-        
         <div class="flex justify-between px-20 mt-2 text-lg font-bold">
             <div>MATCH: 21</div>
             <div>FINAL - 72KG MALE</div>
         </div>
-
         <div class="main-score-area">
             <div class="rf-panel items-start">
                 <div class="text-yellow-500 text-sm mb-1">RF</div>
@@ -61,50 +46,26 @@
                 <div class="rf-row"><span>4</span><div id="rf-red-4" class="rf-indicator"></div></div>
                 <div class="rf-row"><span>5</span><div id="rf-red-5" class="rf-indicator"></div></div>
             </div>
-
             <div class="timer-container">
                 <div id="round-label" class="text-xs font-bold uppercase">ROUND 1</div>
                 <div id="timer-display" class="timer-digits">01:30</div>
             </div>
-
             <div class="score-box bg-red">
                 <div id="red-score" class="display-score">0</div>
-                
                 <div class="foul-box">
-                    <div class="foul-item">
-                        <span class="foul-label">Remind</span>
-                        <span id="red-remind" class="foul-number text-yellow-400">0</span>
-                    </div>
-                    <div class="foul-item">
-                        <span class="foul-label">Warned</span>
-                        <span id="red-warned" class="foul-number">0</span>
-                    </div>
-                    <div class="foul-item">
-                        <span class="foul-label">Medical</span>
-                        <span id="red-medical" class="foul-number">0</span>
-                    </div>
+                    <div class="foul-item"><span class="foul-label">Remind</span><span id="red-remind" class="foul-number text-yellow-400">0</span></div>
+                    <div class="foul-item"><span class="foul-label">Warned</span><span id="red-warned" class="foul-number">0</span></div>
+                    <div class="foul-item"><span class="foul-label">Medical</span><span id="red-medical" class="foul-number">0</span></div>
                 </div>
             </div>
-
             <div class="score-box bg-blue">
                 <div id="blue-score" class="display-score">0</div>
-
                 <div class="foul-box">
-                    <div class="foul-item">
-                        <span class="foul-label">Remind</span>
-                        <span id="blue-remind" class="foul-number text-yellow-400">0</span>
-                    </div>
-                    <div class="foul-item">
-                        <span class="foul-label">Warned</span>
-                        <span id="blue-warned" class="foul-number">0</span>
-                    </div>
-                    <div class="foul-item">
-                        <span class="foul-label">Medical</span>
-                        <span id="blue-medical" class="foul-number">0</span>
-                    </div>
+                    <div class="foul-item"><span class="foul-label">Remind</span><span id="blue-remind" class="foul-number text-yellow-400">0</span></div>
+                    <div class="foul-item"><span class="foul-label">Warned</span><span id="blue-warned" class="foul-number">0</span></div>
+                    <div class="foul-item"><span class="foul-label">Medical</span><span id="blue-medical" class="foul-number">0</span></div>
                 </div>
             </div>
-
             <div class="rf-panel items-end">
                 <div class="text-yellow-500 text-sm mb-1">RF</div>
                 <div class="rf-row"><div id="rf-blue-1" class="rf-indicator"></div><span>1</span></div>
@@ -114,9 +75,8 @@
                 <div class="rf-row"><div id="rf-blue-5" class="rf-indicator"></div><span>5</span></div>
             </div>
         </div>
-
         <div class="text-center text-gray-700 text-[10px] py-1 uppercase tracking-tighter">
-            System Online | Judge Delay: 3s | F1: Start-Pause | F6: Reset
+            F1: Start-Pause | F6: Reset | Hiệp 2 chờ lệnh F1 mới chạy
         </div>
     </div>
 
@@ -136,7 +96,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyB2l67XVpiSnzdjWj7-9Nr8UCOXW9XKVnk",
@@ -147,11 +106,9 @@
             messagingSenderId: "554190803446",
             appId: "1:554190803446:web:fe9c66dfcbb8b96d9a37d7"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref('vovinam_pro');
-        
-        let state = { redScore: 0, blueScore: 0, timer: 90, isRunning: false, votes: {}, redFouls: {remind:0, warned:0, medical:0}, blueFouls: {remind:0, warned:0, medical:0} };
+        let state = { redScore:0, blueScore:0, timer:90, isRunning:false, votes:{}, round:1, isBreak:false, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0} };
         let myJudgeId = null;
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -159,7 +116,7 @@
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
             db.child('active_judges').transaction(c => (c || 0) + 1, (err, comm, snap) => {
-                myJudgeId = snapshot.val();
+                myJudgeId = snap.val();
                 document.getElementById('judge-id-display').innerText = myJudgeId;
             });
         }
@@ -181,13 +138,12 @@
 
         function processVotes() {
             const now = Date.now();
-            const timeLimit = 3000;
             ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
                 const groupVotes = state.votes[group];
                 if (!groupVotes) return;
                 let validJudges = [];
                 Object.keys(groupVotes).forEach(jId => {
-                    if (now - groupVotes[jId] < timeLimit) validJudges.push(jId);
+                    if (now - groupVotes[jId] < 3000) validJudges.push(jId);
                     else db.child(`votes/${group}/${jId}`).remove();
                 });
                 if (validJudges.length >= 2) {
@@ -199,10 +155,31 @@
             });
         }
 
+        // LOGIC CHUYỂN HIỆP QUAN TRỌNG
+        function handleTimerEnd() {
+            if (state.round === 1 && !state.isBreak) {
+                // Hết hiệp 1 -> Nghỉ 45s và TỰ CHẠY
+                state.isBreak = true;
+                state.timer = 45;
+                state.isRunning = true; 
+            } else if (state.isBreak) {
+                // Hết giờ nghỉ -> Hiệp 2 và CHỜ LỆNH (Dừng lại)
+                state.isBreak = false;
+                state.round = 2;
+                state.timer = 90;
+                state.isRunning = false; // QUAN TRỌNG: Dừng lại chờ bấm F1
+            } else {
+                // Hết hiệp 2 -> Kết thúc
+                state.isRunning = false;
+            }
+            db.set(state);
+        }
+
         function render() {
             document.getElementById('red-score').innerText = state.redScore || 0;
             document.getElementById('blue-score').innerText = state.blueScore || 0;
             document.getElementById('timer-display').innerText = formatTime(state.timer);
+            document.getElementById('round-label').innerText = state.isBreak ? "BREAK TIME" : `ROUND ${state.round}`;
             
             document.getElementById('red-remind').innerText = state.redFouls?.remind || 0;
             document.getElementById('red-warned').innerText = state.redFouls?.warned || 0;
@@ -217,10 +194,8 @@
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
-                    let v1 = state.votes[`${side}_p1`] ? state.votes[`${side}_p1`][i] : null;
-                    if (v1 && (now - v1 < 3000)) el.classList.add('rf-active-1');
-                    let v2 = state.votes[`${side}_p2`] ? state.votes[`${side}_p2`][i] : null;
-                    if (v2 && (now - v2 < 3000)) el.classList.add('rf-active-2');
+                    if (state.votes[`${side}_p1`]?.[i] && (now - state.votes[`${side}_p1`][i] < 3000)) el.classList.add('rf-active-1');
+                    if (state.votes[`${side}_p2`]?.[i] && (now - state.votes[`${side}_p2`][i] < 3000)) el.classList.add('rf-active-2');
                 });
             }
         }
@@ -233,36 +208,23 @@
 
         if (!isMobile) {
             setInterval(() => {
-                if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
+                if (state.isRunning && state.timer > 0) {
+                    db.child('timer').set(state.timer - 1);
+                } else if (state.isRunning && state.timer === 0) {
+                    handleTimerEnd(); // Khi đếm về 0 thì gọi hàm chuyển hiệp
+                }
             }, 1000);
             setInterval(render, 500);
         }
 
-        function addFoul(team, type) {
-            let fouls = team === 'red' ? state.redFouls : state.blueFouls;
-            if (!fouls) fouls = {remind:0, warned:0, medical:0};
-            if (type === 'remind') {
-                fouls.remind++;
-                if (fouls.remind >= 3) { fouls.warned++; fouls.remind = 0; }
-            } else { fouls[type]++; }
-            db.child(team + 'Fouls').set(fouls);
-        }
-
         document.addEventListener('keydown', (e) => {
-            if (e.key.startsWith('F')) e.preventDefault();
-            const isCtrl = e.ctrlKey;
-            const key = e.key.toUpperCase();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F6') {
                 if(confirm("Reset?")) db.set({
-                    redScore: 0, blueScore: 0, timer: 90, isRunning: false, 
-                    active_judges: 0, votes: {}, redFouls: {remind:0, warned:0, medical:0}, blueFouls: {remind:0, warned:0, medical:0}
+                    redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
+                    active_judges:0, votes:{}, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0}
                 });
             }
-            const team = isCtrl ? 'blue' : 'red';
-            if (key === 'R') addFoul(team, 'remind');
-            if (key === 'W') addFoul(team, 'warned');
-            if (key === 'M') addFoul(team, 'medical');
         });
     </script>
 </body>
