@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Full Screen Edition</title>
+    <title>Vovinam Pro - Ultra Fast Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -16,7 +16,7 @@
         .display-score { font-size: 24rem; font-weight: 900; line-height: 0.7; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
-        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: all 0.2s; }
+        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: all 0.1s; }
         .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 15px #facc15; border-color: #fff; }
         .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 15px #38bdf8; border-color: #fff; }
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
@@ -25,22 +25,19 @@
         .foul-item { display: flex; flex-direction: column; align-items: center; }
         .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; font-weight: bold; }
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
-        
-        /* GIAO DIỆN REMOTE ĐIỆN THOẠI */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
         .remote-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #111; border-bottom: 2px solid #333; }
-        .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; active: opacity-70; }
-        
+        .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
         .fs-btn { background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
     <div id="desktop-ui">
-        <div class="header-title">VOVINAM HO CHI MINH CITY CADRE ACADEMY</div>
+        <div class="header-title">HO CHI MINH CITY CADRE ACADEMY</div>
         <div class="flex justify-between px-20 mt-2 text-lg font-bold">
-            <div>MATCH: 01</div>
-            <div>FINAL - KG MALE</div>
+            <div>MATCH: 21</div>
+            <div>FINAL - 72KG MALE</div>
         </div>
         <div class="main-score-area">
             <div class="rf-panel items-start">
@@ -81,7 +78,7 @@
             </div>
         </div>
         <div class="flex justify-between items-center px-4 py-1">
-            <div class="text-gray-500 text-[10px] uppercase">F1: Start/Pause | F2-F5: +/- Score | F6: Reset | R/W/M: Fouls (Alt to decrease)</div>
+            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen</div>
             <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
     </div>
@@ -121,8 +118,16 @@
         let state = { redScore:0, blueScore:0, timer:90, isRunning:false, votes:{}, round:1, isBreak:false, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0} };
         let myJudgeId = null;
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const CONSENSUS_THRESHOLD = 2; // Số giám định tối thiểu (Cài 2 cho 2/3 hoặc 3 cho 3/5)
-        const VOTE_WINDOW = 2000; // Cửa sổ thời gian 2 giây
+        let serverOffset = 0;
+
+        // Tính toán độ lệch thời gian giữa máy cục bộ và server Google
+        firebase.database().ref(".info/serverTimeOffset").on("value", (snap) => {
+            serverOffset = snap.val();
+        });
+
+        function getServerTime() {
+            return Date.now() + serverOffset;
+        }
 
         if (isMobile) {
             document.getElementById('remote-ui').style.display = 'flex';
@@ -133,78 +138,60 @@
             });
         }
 
+        // LẮNG NGHE - CẬP NHẬT TỨC THÌ
         db.on('value', (snap) => {
             const data = snap.val();
             if (data) {
                 state = data;
                 if (!state.votes) state.votes = {};
+                // Thực hiện xử lý điểm và vẽ ngay lập tức, không chờ interval
                 if (!isMobile) processVotes(); 
                 render();
             }
         });
 
-        // HÀM GỬI TÍN HIỆU TỪ REMOTE
         function sendVote(team, points) {
             if (!myJudgeId || myJudgeId > 5) return;
-            const now = Date.now();
-            // Gửi cả timestamp để máy chủ tính toán cửa sổ thời gian
-            db.child(`votes/${team}_p${points}/${myJudgeId}`).set(now);
-            if (navigator.vibrate) navigator.vibrate(50); // Rung nhẹ phản hồi
-        }
-
-        // HÀM XỬ LÝ ĐỒNG THUẬN (CHỈ CHẠY TRÊN MÁY DESKTOP)
-        function processVotes() {
-            const now = Date.now();
-            const groups = ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'];
-
-            groups.forEach(group => {
-                const groupVotes = state.votes[group];
-                if (!groupVotes) return;
-
-                const judgeIds = Object.keys(groupVotes);
-                if (judgeIds.length < CONSENSUS_THRESHOLD) return;
-
-                // Chuyển object thành mảng và sắp xếp theo thời gian nhấn
-                const votes = judgeIds.map(id => ({ id, time: groupVotes[id] }))
-                                      .sort((a, b) => a.time - b.time);
-
-                // Lấy mốc là người bấm đầu tiên trong nhóm
-                const firstVoteTime = votes[0].time;
-                
-                // Tìm các giám định bấm trong vòng 2 giây kể từ người đầu tiên
-                const validVotes = votes.filter(v => (v.time - firstVoteTime) <= VOTE_WINDOW);
-
-                if (validVotes.length >= CONSENSUS_THRESHOLD) {
-                    const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
-                    const points = group.includes('_p1') ? 1 : 2;
-
-                    // 1. Cộng điểm
-                    db.child(teamKey).set((state[teamKey] || 0) + points);
-
-                    // 2. Xóa các vote đã được sử dụng để tránh cộng lặp
-                    validVotes.forEach(v => {
-                        db.child(`votes/${group}/${v.id}`).remove();
-                    });
-                } else {
-                    // Dọn dẹp các vote đã quá cũ mà không đủ người đồng thuận
-                    votes.forEach(v => {
-                        if (now - v.time > VOTE_WINDOW) {
-                            db.child(`votes/${group}/${v.id}`).remove();
-                        }
-                    });
-                }
+            // Dùng SERVER TIMESTAMP để đồng bộ tuyệt đối
+            db.child(`votes/${team}_p${points}/${myJudgeId}`).set({
+                t: firebase.database.ServerValue.TIMESTAMP,
+                used: false
             });
         }
 
-        function handleTimerEnd() {
-            if (state.round === 1 && !state.isBreak) {
-                state.isBreak = true; state.timer = 45; state.isRunning = true; 
-            } else if (state.isBreak) {
-                state.isBreak = false; state.round = 2; state.timer = 90; state.isRunning = false; 
-            } else {
-                state.isRunning = false;
-            }
-            db.set(state);
+        function processVotes() {
+            const now = getServerTime();
+            const timeLimit = 3000;
+
+            ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
+                const groupVotes = state.votes[group];
+                if (!groupVotes) return;
+
+                let validJudges = [];
+                Object.keys(groupVotes).forEach(jId => {
+                    const vote = groupVotes[jId];
+                    const timestamp = (typeof vote === 'object') ? vote.t : vote;
+                    const isUsed = (typeof vote === 'object') ? vote.used : false;
+
+                    if (now - timestamp < timeLimit) {
+                        if (!isUsed) validJudges.push(jId);
+                    } else {
+                        db.child(`votes/${group}/${jId}`).remove();
+                    }
+                });
+
+                if (validJudges.length >= 2) {
+                    const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
+                    const points = group.includes('_p1') ? 1 : 2;
+                    
+                    db.child(teamKey).set((state[teamKey] || 0) + points);
+
+                    validJudges.forEach(jId => {
+                        const originalTS = (typeof groupVotes[jId] === 'object') ? groupVotes[jId].t : groupVotes[jId];
+                        db.child(`votes/${group}/${jId}`).update({ used: true });
+                    });
+                }
+            });
         }
 
         function render() {
@@ -220,19 +207,22 @@
             document.getElementById('blue-warned').innerText = state.blueFouls?.warned || 0;
             document.getElementById('blue-medical').innerText = state.blueFouls?.medical || 0;
             
-            const now = Date.now();
+            const now = getServerTime();
             for (let i = 1; i <= 5; i++) {
                 ['red', 'blue'].forEach(side => {
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
                     
-                    // Hiển thị đèn dựa trên vote hiện có trong DB và còn trong hạn 2 giây
-                    const p1Time = state.votes[`${side}_p1`]?.[i];
-                    const p2Time = state.votes[`${side}_p2`]?.[i];
-
-                    if (p1Time && (now - p1Time < VOTE_WINDOW)) el.classList.add('rf-active-1');
-                    else if (p2Time && (now - p2Time < VOTE_WINDOW)) el.classList.add('rf-active-2');
+                    [1, 2].forEach(p => {
+                        const vote = state.votes[`${side}_p${p}`] ? state.votes[`${side}_p${p}`][i] : null;
+                        if (vote) {
+                            const ts = (typeof vote === 'object') ? vote.t : vote;
+                            if (now - ts < 3000) {
+                                el.classList.add(p === 1 ? 'rf-active-1' : 'rf-active-2');
+                            }
+                        }
+                    });
                 });
             }
         }
@@ -243,25 +233,23 @@
         }
 
         function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Error: ${err.message}`);
-                });
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
         }
 
+        // Vòng lặp chỉ dùng cho đồng hồ, RF dùng sự kiện Realtime
         if (!isMobile) {
             setInterval(() => {
                 if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
                 else if (state.isRunning && state.timer === 0) handleTimerEnd();
             }, 1000);
-            setInterval(render, 300); // Tăng tần suất render để đèn nhạy hơn
+            
+            // Vẽ lại đèn RF mỗi 200ms để đảm bảo tắt đèn đúng lúc, mượt mà
+            setInterval(render, 200);
         }
 
         function updateFoul(team, type, isDecrease) {
-            let fouls = team === 'red' ? {...state.redFouls} : {...state.blueFouls};
+            let fouls = team === 'red' ? state.redFouls : state.blueFouls;
             if (!fouls) fouls = {remind:0, warned:0, medical:0};
             if (isDecrease) fouls[type] = Math.max(0, fouls[type] - 1);
             else {
@@ -274,7 +262,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            const blockedKeys = ['F1','F2','F3','F4','F5','F6','F11'];
+            const blockedKeys = ['F1','F2','F3','F4','F5','F6','F11','F12'];
             if (blockedKeys.includes(e.key)) e.preventDefault();
 
             const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
@@ -284,7 +272,7 @@
             if (e.key === 'F4') db.child('blueScore').set((state.blueScore || 0) + 1);
             if (e.key === 'F5') db.child('blueScore').set(Math.max(0, (state.blueScore || 0) - 1));
             if (e.key === 'F6') {
-                if(confirm("Reset trận đấu?")) db.set({
+                if(confirm("Reset?")) db.set({
                     redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
                     active_judges:0, votes:{}, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0}
                 });
