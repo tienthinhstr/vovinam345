@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Ultra Fast Sync</title>
+    <title>Vovinam Pro - RF Fixed Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -16,9 +16,9 @@
         .display-score { font-size: 24rem; font-weight: 900; line-height: 0.7; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
-        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: all 0.1s; }
-        .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 15px #facc15; border-color: #fff; }
-        .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 15px #38bdf8; border-color: #fff; }
+        .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: background 0.2s; }
+        .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; border-color: #fff; }
+        .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; border-color: #fff; }
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
         .foul-box { width: 95%; display: flex; justify-content: space-around; align-items: center; padding: 15px 0; border-top: 2px solid rgba(255,255,255,0.2); position: absolute; bottom: 0; background: rgba(0,0,0,0.1); }
@@ -114,20 +114,9 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref('vovinam_pro');
-        
         let state = { redScore:0, blueScore:0, timer:90, isRunning:false, votes:{}, round:1, isBreak:false, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0} };
         let myJudgeId = null;
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let serverOffset = 0;
-
-        // Tính toán độ lệch thời gian giữa máy cục bộ và server Google
-        firebase.database().ref(".info/serverTimeOffset").on("value", (snap) => {
-            serverOffset = snap.val();
-        });
-
-        function getServerTime() {
-            return Date.now() + serverOffset;
-        }
 
         if (isMobile) {
             document.getElementById('remote-ui').style.display = 'flex';
@@ -138,30 +127,29 @@
             });
         }
 
-        // LẮNG NGHE - CẬP NHẬT TỨC THÌ
         db.on('value', (snap) => {
             const data = snap.val();
             if (data) {
                 state = data;
                 if (!state.votes) state.votes = {};
-                // Thực hiện xử lý điểm và vẽ ngay lập tức, không chờ interval
                 if (!isMobile) processVotes(); 
                 render();
             }
         });
 
+        // RF gửi phiếu: kèm flag used để biết phiếu đã tính điểm chưa
         function sendVote(team, points) {
             if (!myJudgeId || myJudgeId > 5) return;
-            // Dùng SERVER TIMESTAMP để đồng bộ tuyệt đối
             db.child(`votes/${team}_p${points}/${myJudgeId}`).set({
-                t: firebase.database.ServerValue.TIMESTAMP,
+                t: Date.now(),
                 used: false
             });
         }
 
+        // Logic xử lý phiếu (Chỉ chạy trên máy tính)
         function processVotes() {
-            const now = getServerTime();
-            const timeLimit = 3000;
+            const now = Date.now();
+            const timeLimit = 3000; // 3 giây đèn sáng và chờ phiếu
 
             ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
                 const groupVotes = state.votes[group];
@@ -176,22 +164,40 @@
                     if (now - timestamp < timeLimit) {
                         if (!isUsed) validJudges.push(jId);
                     } else {
+                        // Tự động xóa phiếu sau 3 giây để sạch DB
                         db.child(`votes/${group}/${jId}`).remove();
                     }
                 });
 
+                // Nếu có từ 2 người trở lên cùng bấm và chưa được tính điểm
                 if (validJudges.length >= 2) {
                     const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
                     const points = group.includes('_p1') ? 1 : 2;
                     
+                    // 1. Cộng điểm thật
                     db.child(teamKey).set((state[teamKey] || 0) + points);
 
+                    // 2. Đánh dấu các phiếu này đã dùng (KHÔNG XÓA để đèn vẫn sáng đủ 3s)
                     validJudges.forEach(jId => {
                         const originalTS = (typeof groupVotes[jId] === 'object') ? groupVotes[jId].t : groupVotes[jId];
-                        db.child(`votes/${group}/${jId}`).update({ used: true });
+                        db.child(`votes/${group}/${jId}`).set({
+                            t: originalTS,
+                            used: true
+                        });
                     });
                 }
             });
+        }
+
+        function handleTimerEnd() {
+            if (state.round === 1 && !state.isBreak) {
+                state.isBreak = true; state.timer = 45; state.isRunning = true; 
+            } else if (state.isBreak) {
+                state.isBreak = false; state.round = 2; state.timer = 90; state.isRunning = false; 
+            } else {
+                state.isRunning = false;
+            }
+            db.set(state);
         }
 
         function render() {
@@ -207,13 +213,14 @@
             document.getElementById('blue-warned').innerText = state.blueFouls?.warned || 0;
             document.getElementById('blue-medical').innerText = state.blueFouls?.medical || 0;
             
-            const now = getServerTime();
+            const now = Date.now();
             for (let i = 1; i <= 5; i++) {
                 ['red', 'blue'].forEach(side => {
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
                     
+                    // Kiểm tra cả 2 loại điểm để sáng đèn
                     [1, 2].forEach(p => {
                         const vote = state.votes[`${side}_p${p}`] ? state.votes[`${side}_p${p}`][i] : null;
                         if (vote) {
@@ -233,19 +240,24 @@
         }
 
         function toggleFullScreen() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-            else document.exitFullscreen();
+            const doc = window.document;
+            const docEl = doc.documentElement;
+            const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancel = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                request.call(docEl);
+            } else {
+                cancel.call(doc);
+            }
         }
 
-        // Vòng lặp chỉ dùng cho đồng hồ, RF dùng sự kiện Realtime
         if (!isMobile) {
             setInterval(() => {
                 if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
                 else if (state.isRunning && state.timer === 0) handleTimerEnd();
             }, 1000);
-            
-            // Vẽ lại đèn RF mỗi 200ms để đảm bảo tắt đèn đúng lúc, mượt mà
-            setInterval(render, 200);
+            setInterval(render, 500);
         }
 
         function updateFoul(team, type, isDecrease) {
@@ -262,8 +274,8 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            const blockedKeys = ['F1','F2','F3','F4','F5','F6','F11','F12'];
-            if (blockedKeys.includes(e.key)) e.preventDefault();
+            const blockedKeys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
+            if (blockedKeys.includes(e.key) || (e.ctrlKey && ['R','S','P','F'].includes(e.key.toUpperCase()))) e.preventDefault();
 
             const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
