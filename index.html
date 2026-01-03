@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Final Edition</title>
+    <title>Vovinam Pro - Full Screen Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -27,6 +27,9 @@
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
         .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
+        /* Nút Full Screen */
+        .fs-btn { position: absolute; bottom: 10px; right: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 10px; opacity: 0.3; transition: 0.3s; cursor: pointer; border: none; }
+        .fs-btn:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -76,8 +79,9 @@
             </div>
         </div>
         <div class="text-center text-gray-700 text-[10px] py-1 uppercase tracking-tighter">
-            F1: Start-Pause | F2-F5: +/- Điểm thủ công | F6: Reset | F7: Skip Round | R/W/M: Lỗi (Alt để trừ)
+            F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen | R/W/M: Lỗi (Alt để trừ)
         </div>
+        <button class="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</button>
     </div>
 
     <div id="remote-ui" class="p-2">
@@ -202,6 +206,18 @@
             return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
         if (!isMobile) {
             setInterval(() => {
                 if (state.isRunning && state.timer > 0) {
@@ -213,11 +229,9 @@
             setInterval(render, 500);
         }
 
-        // Hàm xử lý lỗi (+/-)
         function updateFoul(team, type, isDecrease) {
             let fouls = team === 'red' ? state.redFouls : state.blueFouls;
             if (!fouls) fouls = {remind:0, warned:0, medical:0};
-            
             if (isDecrease) {
                 fouls[type] = Math.max(0, fouls[type] - 1);
             } else {
@@ -230,12 +244,16 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key.startsWith('F')) e.preventDefault();
+            // KHÓA CÁC PHÍM CHỨC NĂNG CỦA TRÌNH DUYỆT (F1-F12, Ctrl+R, v.v.)
+            const blockedKeys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
+            if (blockedKeys.includes(e.key) || (e.ctrlKey && ['R','S','P','F'].includes(e.key.toUpperCase()))) {
+                e.preventDefault();
+            }
+
             const isCtrl = e.ctrlKey;
             const isAlt = e.altKey;
             const key = e.key.toUpperCase();
 
-            // Phím F
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F2') db.child('redScore').set((state.redScore || 0) + 1);
             if (e.key === 'F3') db.child('redScore').set(Math.max(0, (state.redScore || 0) - 1));
@@ -247,9 +265,8 @@
                     active_judges:0, votes:{}, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0}
                 });
             }
-            if (e.key === 'F7') handleTimerEnd();
+            if (e.key === 'F11') toggleFullScreen();
 
-            // Phím Lỗi
             const team = isCtrl ? 'blue' : 'red';
             if (key === 'R') updateFoul(team, 'remind', isAlt);
             if (key === 'W') updateFoul(team, 'warned', isAlt);
