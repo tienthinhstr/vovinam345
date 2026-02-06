@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - New Layout Edition</title>
+    <title>Vovinam Pro - Final Layout</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
-        #desktop-ui { display: flex; flex-direction: column; height: 100vh; padding: 10px 20px; box-sizing: border-box; }
+        body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        #desktop-ui { display: flex; flex-direction: column; flex: 1; padding: 10px 20px; box-sizing: border-box; }
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; }
         
         /* Khu vực điểm chính và đồng hồ */
-        .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 5px; max-height: 65vh; /* Giới hạn chiều cao để nhường chỗ cho phần lỗi */ }
+        .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 10px; max-height: 75vh; /* Tăng chiều cao tối đa */ }
         .score-box { flex: 1; display: flex; justify-content: center; align-items: center; border-radius: 5px; }
         .bg-red { background-color: #e11d48; }
         .bg-blue { background-color: #2563eb; }
-        .display-score { font-size: 24rem; font-weight: 900; line-height: 1; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .display-score { font-size: 28rem; font-weight: 900; line-height: 1; text-shadow: 0 10px 20px rgba(0,0,0,0.5); /* Tăng kích thước số điểm */ }
         
-        /* RF Panel và Đồng hồ giữ nguyên */
+        /* RF Panel và Đồng hồ */
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
         .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: background 0.2s; }
@@ -26,23 +26,22 @@
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
 
-        /* --- CSS MỚI CHO PHẦN LỖI (FOULS) --- */
+        /* --- CSS CHO PHẦN LỖI (FOULS) ĐÃ SỬA --- */
         .fouls-container {
             display: flex;
             gap: 10px;
-            margin-top: 15px; /* Khoảng cách với ô điểm chính */
-            margin-bottom: 5px;
+            /* Căn lề trái phải để thẳng hàng với hộp điểm (80px RF + 10px gap = 90px) */
+            margin: 15px 90px 5px 90px;
         }
         .foul-box { 
-            flex: 1; /* Chia đều chiều ngang */
+            flex: 1;
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
-            padding: 12px 0; 
-            background: #1a1a1a; /* Màu nền xám tối để nổi trên nền đen */
+            padding: 20px 0; /* Tăng padding để hộp lỗi cao hơn */
+            background: #1a1a1a;
             border-radius: 5px;
         }
-        /* Viền màu để phân biệt đội */
         .foul-red-accent { border-top: 4px solid #e11d48; }
         .foul-blue-accent { border-top: 4px solid #2563eb; }
 
@@ -112,7 +111,7 @@
             </div>
         </div>
 
-        <div class="flex justify-between items-center px-4 py-1">
+        <div class="flex justify-between items-center px-4 py-1 mt-auto">
             <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen | R/W/M: Fouls (Ctrl for Blue)</div>
             <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
@@ -285,7 +284,6 @@
             } else {
                 if (type === 'remind') {
                     fouls.remind++;
-                    // Luật: 3 Nhắc nhở -> 1 Cảnh cáo -> Trừ 1 điểm
                     if (fouls.remind >= 3) {
                         fouls.warned++;
                         fouls.remind = 0;
@@ -294,7 +292,6 @@
                     }
                 } else if (type === 'warned') {
                     fouls.warned++;
-                    // Luật: Cảnh cáo trực tiếp -> Trừ 1 điểm
                     const scoreKey = team + 'Score';
                     db.child(scoreKey).set(Math.max(0, (state[scoreKey] || 0) - 1));
                 } else {
@@ -322,7 +319,6 @@
             }
             if (e.key === 'F11') toggleFullScreen();
 
-            // Phím tắt lỗi: Không Ctrl -> Đỏ, Có Ctrl -> Xanh
             const team = isCtrl ? 'blue' : 'red';
             if (key === 'R') updateFoul(team, 'remind', isAlt);
             if (key === 'W') updateFoul(team, 'warned', isAlt);
