@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Final Layout</title>
+    <title>Vovinam Pro - Final Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -11,26 +11,27 @@
         .header-title { color: #facc15; font-size: 2.5rem; font-weight: bold; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; }
         
         /* Khu vực điểm chính và đồng hồ */
-        .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 10px; max-height: 75vh; /* Tăng chiều cao tối đa */ }
+        .main-score-area { display: flex; flex: 1; margin-top: 10px; position: relative; gap: 10px; max-height: 75vh; }
         .score-box { flex: 1; display: flex; justify-content: center; align-items: center; border-radius: 5px; }
         .bg-red { background-color: #e11d48; }
         .bg-blue { background-color: #2563eb; }
-        .display-score { font-size: 28rem; font-weight: 900; line-height: 1; text-shadow: 0 10px 20px rgba(0,0,0,0.5); /* Tăng kích thước số điểm */ }
+        .display-score { font-size: 28rem; font-weight: 900; line-height: 1; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
-        /* RF Panel và Đồng hồ */
+        /* RF Panel */
         .rf-panel { width: 80px; display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 1.4rem; font-weight: bold; }
         .rf-row { display: flex; align-items: center; gap: 10px; }
         .rf-indicator { width: 22px; height: 22px; border: 2px solid #444; border-radius: 4px; background: #222; transition: background 0.2s; }
         .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; border-color: #fff; }
         .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; border-color: #fff; }
+        
+        /* Đồng hồ */
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
         .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
 
-        /* --- CSS CHO PHẦN LỖI (FOULS) ĐÃ SỬA --- */
+        /* Khu vực lỗi (Fouls) - Đã căn lề chuẩn */
         .fouls-container {
             display: flex;
             gap: 10px;
-            /* Căn lề trái phải để thẳng hàng với hộp điểm (80px RF + 10px gap = 90px) */
             margin: 15px 90px 5px 90px;
         }
         .foul-box { 
@@ -38,7 +39,7 @@
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
-            padding: 20px 0; /* Tăng padding để hộp lỗi cao hơn */
+            padding: 20px 0;
             background: #1a1a1a;
             border-radius: 5px;
         }
@@ -49,7 +50,7 @@
         .foul-label { font-size: 0.8rem; text-transform: uppercase; opacity: 0.8; }
         .foul-number { font-size: 2.2rem; font-weight: 900; line-height: 1; }
 
-        /* Mobile UI */
+        /* Mobile UI (Remote) */
         #remote-ui { display: none; height: 100vh; flex-direction: column; background: #000; }
         .remote-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #111; border-bottom: 2px solid #333; }
         .btn-remote { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: 900; border-radius: 15px; margin: 5px; }
@@ -112,7 +113,7 @@
         </div>
 
         <div class="flex justify-between items-center px-4 py-1 mt-auto">
-            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen | R/W/M: Fouls (Ctrl for Blue)</div>
+            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2/F3: Red +/- | F4/F5: Blue +/- | F6: Reset | R/W/M: Fouls</div>
             <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
     </div>
@@ -284,16 +285,19 @@
             } else {
                 if (type === 'remind') {
                     fouls.remind++;
+                    // Luật: 3 Nhắc nhở -> 1 Cảnh cáo -> Trừ 1 điểm (CHO PHÉP ÂM)
                     if (fouls.remind >= 3) {
                         fouls.warned++;
                         fouls.remind = 0;
                         const scoreKey = team + 'Score';
-                        db.child(scoreKey).set(Math.max(0, (state[scoreKey] || 0) - 1));
+                        // Đã bỏ Math.max để cho phép điểm âm
+                        db.child(scoreKey).set((state[scoreKey] || 0) - 1);
                     }
                 } else if (type === 'warned') {
                     fouls.warned++;
+                    // Luật: Cảnh cáo trực tiếp -> Trừ 1 điểm (CHO PHÉP ÂM)
                     const scoreKey = team + 'Score';
-                    db.child(scoreKey).set(Math.max(0, (state[scoreKey] || 0) - 1));
+                    db.child(scoreKey).set((state[scoreKey] || 0) - 1);
                 } else {
                     fouls[type]++;
                 }
@@ -308,9 +312,15 @@
             const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F2') db.child('redScore').set((state.redScore || 0) + 1);
-            if (e.key === 'F3') db.child('redScore').set(Math.max(0, (state.redScore || 0) - 1));
+            
+            // F3: TRỪ ĐIỂM ĐỎ (Cho phép âm)
+            if (e.key === 'F3') db.child('redScore').set((state.redScore || 0) - 1);
+            
             if (e.key === 'F4') db.child('blueScore').set((state.blueScore || 0) + 1);
-            if (e.key === 'F5') db.child('blueScore').set(Math.max(0, (state.blueScore || 0) - 1));
+            
+            // F5: TRỪ ĐIỂM XANH (Cho phép âm)
+            if (e.key === 'F5') db.child('blueScore').set((state.blueScore || 0) - 1);
+            
             if (e.key === 'F6') {
                 if(confirm("Reset?")) db.set({
                     redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
