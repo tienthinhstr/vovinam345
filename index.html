@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - Final Fixed</title>
+    <title>Vovinam Pro - 3s RF Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -24,11 +24,11 @@
         .rf-active-1 { background-color: #facc15 !important; box-shadow: 0 0 10px #facc15; border-color: #fff; }
         .rf-active-2 { background-color: #38bdf8 !important; box-shadow: 0 0 10px #38bdf8; border-color: #fff; }
         
-        /* Đồng hồ - Đã thêm tabular-nums để số không bị nhảy */
+        /* Đồng hồ */
         .timer-container { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 5px 30px; border-radius: 4px; text-align: center; min-width: 180px; z-index: 10; border: 2px solid #333; }
-        .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; font-variant-numeric: tabular-nums; }
+        .timer-digits { font-size: 3.5rem; font-weight: bold; font-family: monospace; line-height: 1; }
 
-        /* Khu vực lỗi (Fouls) */
+        /* Khu vực lỗi (Fouls) - Đã căn lề chuẩn */
         .fouls-container {
             display: flex;
             gap: 10px;
@@ -167,14 +167,13 @@
             if (data) {
                 state = data;
                 if (!state.votes) state.votes = {};
-                // QUAN TRỌNG: Đã xóa processVotes() ở đây để tránh vòng lặp
+                if (!isMobile) processVotes(); 
                 render();
             }
         });
 
         function sendVote(team, points) {
             if (!myJudgeId || myJudgeId > 5) return;
-            // Cho phép vote liên tục, không block
             db.child(`votes/${team}_p${points}/${myJudgeId}`).set({
                 t: Date.now(),
                 used: false
@@ -195,22 +194,17 @@
                     const timestamp = (typeof vote === 'object') ? vote.t : vote;
                     const isUsed = (typeof vote === 'object') ? vote.used : false;
 
-                    // Chỉ xử lý các vote chưa dùng và còn hiệu lực
                     if (now - timestamp < timeLimit) {
                         if (!isUsed) validJudges.push(jId);
                     } else {
-                        // Xóa vote quá hạn để sạch DB
                         db.child(`votes/${group}/${jId}`).remove();
                     }
                 });
 
-                // Nếu >= 2 giám khảo cùng bấm
                 if (validJudges.length >= 2) {
                     const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
                     const points = group.includes('_p1') ? 1 : 2;
                     db.child(teamKey).set((state[teamKey] || 0) + points);
-                    
-                    // Đánh dấu các vote này đã được dùng
                     validJudges.forEach(jId => {
                         const originalTS = (typeof groupVotes[jId] === 'object') ? groupVotes[jId].t : groupVotes[jId];
                         db.child(`votes/${group}/${jId}`).set({ t: originalTS, used: true });
@@ -253,7 +247,7 @@
                         const vote = state.votes[`${side}_p${p}`] ? state.votes[`${side}_p${p}`][i] : null;
                         if (vote) {
                             const ts = (typeof vote === 'object') ? vote.t : vote;
-                            // Chỉ sáng đèn nếu vote mới bấm < 3s (bất kể đã dùng hay chưa để giám khảo thấy)
+                            // SỬA LẠI Ở ĐÂY: 3000 là 3 giây (trước đó là 5000)
                             if (now - ts < 3000) el.classList.add(p === 1 ? 'rf-active-1' : 'rf-active-2');
                         }
                     });
@@ -275,22 +269,12 @@
             else cancel.call(doc);
         }
 
-        // --- KHU VỰC LOGIC MÁY CHỦ (DESKTOP) ---
         if (!isMobile) {
-            // Timer loop (1 giây 1 lần)
             setInterval(() => {
                 if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
                 else if (state.isRunning && state.timer === 0) handleTimerEnd();
             }, 1000);
-            
-            // Render loop (UI mượt hơn)
             setInterval(render, 500);
-
-            // VOTE PROCESSING LOOP (Tách riêng để tránh Infinite Loop)
-            // Chạy 200ms một lần để check điểm từ các giám khảo
-            setInterval(() => {
-                if(state.votes) processVotes();
-            }, 200);
         }
 
         function updateFoul(team, type, isDecrease) {
@@ -302,15 +286,17 @@
             } else {
                 if (type === 'remind') {
                     fouls.remind++;
-                    // Luật: 3 Nhắc nhở -> 1 Cảnh cáo -> Trừ 1 điểm
+                    // Luật: 3 Nhắc nhở -> 1 Cảnh cáo -> Trừ 1 điểm (CHO PHÉP ÂM)
                     if (fouls.remind >= 3) {
                         fouls.warned++;
                         fouls.remind = 0;
                         const scoreKey = team + 'Score';
+                        // Đã bỏ Math.max để cho phép điểm âm
                         db.child(scoreKey).set((state[scoreKey] || 0) - 1);
                     }
                 } else if (type === 'warned') {
                     fouls.warned++;
+                    // Luật: Cảnh cáo trực tiếp -> Trừ 1 điểm (CHO PHÉP ÂM)
                     const scoreKey = team + 'Score';
                     db.child(scoreKey).set((state[scoreKey] || 0) - 1);
                 } else {
@@ -327,12 +313,17 @@
             const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
             if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
             if (e.key === 'F2') db.child('redScore').set((state.redScore || 0) + 1);
+            
+            // F3: TRỪ ĐIỂM ĐỎ (Cho phép âm)
             if (e.key === 'F3') db.child('redScore').set((state.redScore || 0) - 1);
+            
             if (e.key === 'F4') db.child('blueScore').set((state.blueScore || 0) + 1);
+            
+            // F5: TRỪ ĐIỂM XANH (Cho phép âm)
             if (e.key === 'F5') db.child('blueScore').set((state.blueScore || 0) - 1);
             
             if (e.key === 'F6') {
-                if(confirm("Reset trận đấu?")) db.set({
+                if(confirm("Reset?")) db.set({
                     redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
                     active_judges:0, votes:{}, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0}
                 });
