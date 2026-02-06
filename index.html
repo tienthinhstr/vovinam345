@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vovinam Pro - RF Fixed Edition</title>
+    <title>Vovinam Pro - Fixed & Auto-Scoring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
@@ -48,10 +48,12 @@
                 <div class="rf-row"><span>4</span><div id="rf-red-4" class="rf-indicator"></div></div>
                 <div class="rf-row"><span>5</span><div id="rf-red-5" class="rf-indicator"></div></div>
             </div>
+            
             <div class="timer-container">
                 <div id="round-label" class="text-xs font-bold uppercase">ROUND 1</div>
                 <div id="timer-display" class="timer-digits">01:30</div>
             </div>
+            
             <div class="score-box bg-red">
                 <div id="red-score" class="display-score">0</div>
                 <div class="foul-box">
@@ -60,6 +62,7 @@
                     <div class="foul-item"><span class="foul-label">Medical</span><span id="red-medical" class="foul-number">0</span></div>
                 </div>
             </div>
+            
             <div class="score-box bg-blue">
                 <div id="blue-score" class="display-score">0</div>
                 <div class="foul-box">
@@ -68,6 +71,7 @@
                     <div class="foul-item"><span class="foul-label">Medical</span><span id="blue-medical" class="foul-number">0</span></div>
                 </div>
             </div>
+            
             <div class="rf-panel items-end">
                 <div class="text-yellow-500 text-sm mb-1">RF</div>
                 <div class="rf-row"><div id="rf-blue-1" class="rf-indicator"></div><span>1</span></div>
@@ -78,7 +82,7 @@
             </div>
         </div>
         <div class="flex justify-between items-center px-4 py-1">
-            <div class="text-gray-700 text-[10px] uppercase">F1: Start-Pause | F2-F5: +/- Điểm | F6: Reset | F11: Full Screen</div>
+            <div class="text-gray-700 text-[10px] uppercase">F1: Start/Pause | F2-F5: +/- Score | F6: Reset | R/W/M: Fouls Red (Ctrl for Blue)</div>
             <button class="fs-btn opacity-30 hover:opacity-100" onclick="toggleFullScreen()">FULL SCREEN</button>
         </div>
     </div>
@@ -112,19 +116,47 @@
             messagingSenderId: "554190803446",
             appId: "1:554190803446:web:fe9c66dfcbb8b96d9a37d7"
         };
-        firebase.initializeApp(firebaseConfig);
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
         const db = firebase.database().ref('vovinam_pro');
         let state = { redScore:0, blueScore:0, timer:90, isRunning:false, votes:{}, round:1, isBreak:false, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0} };
         let myJudgeId = null;
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        // --- CƠ CHẾ MASTER (CHỐNG XUNG ĐỘT TIMER) ---
+        let isMaster = false;
+        if (!isMobile) {
+            db.child('master_node').transaction((current) => {
+                if (!current || Date.now() - current > 5000) return Date.now();
+                return;
+            }, (error, committed, snapshot) => {
+                if (committed) {
+                    isMaster = true;
+                    console.log("MÁY CHỦ: ĐANG ĐIỀU KHIỂN ĐỒNG HỒ");
+                    setInterval(() => db.child('master_node').set(Date.now()), 2000);
+                }
+            });
+        }
 
         if (isMobile) {
             document.getElementById('remote-ui').style.display = 'flex';
             document.getElementById('desktop-ui').style.display = 'none';
-            db.child('active_judges').transaction(c => (c || 0) + 1, (err, comm, snap) => {
-                myJudgeId = snap.val();
+            let storedId = sessionStorage.getItem('judgeId');
+            if (storedId) {
+                myJudgeId = storedId;
                 document.getElementById('judge-id-display').innerText = myJudgeId;
-            });
+            } else {
+                db.child('active_judges').transaction(c => (c || 0) + 1, (err, comm, snap) => {
+                    if (!err && comm) {
+                        myJudgeId = snap.val();
+                        sessionStorage.setItem('judgeId', myJudgeId);
+                        document.getElementById('judge-id-display').innerText = myJudgeId;
+                    }
+                });
+            }
         }
 
         db.on('value', (snap) => {
@@ -132,24 +164,27 @@
             if (data) {
                 state = data;
                 if (!state.votes) state.votes = {};
+                // Chỉ máy tính mới tính toán điểm để giảm tải
                 if (!isMobile) processVotes(); 
                 render();
             }
         });
 
-        // RF gửi phiếu: kèm flag used để biết phiếu đã tính điểm chưa
         function sendVote(team, points) {
             if (!myJudgeId || myJudgeId > 5) return;
+            // Dùng ServerValue.TIMESTAMP để đảm bảo đồng bộ
             db.child(`votes/${team}_p${points}/${myJudgeId}`).set({
-                t: Date.now(),
+                t: firebase.database.ServerValue.TIMESTAMP,
                 used: false
             });
         }
 
-        // Logic xử lý phiếu (Chỉ chạy trên máy tính)
+        // --- XỬ LÝ PHIẾU CHẤM ĐIỂM (ATOMIC UPDATE) ---
         function processVotes() {
             const now = Date.now();
-            const timeLimit = 3000; // 3 giây đèn sáng và chờ phiếu
+            const timeLimit = 3000; 
+            let updates = {};
+            let hasUpdates = false;
 
             ['red_p1', 'red_p2', 'blue_p1', 'blue_p2'].forEach(group => {
                 const groupVotes = state.votes[group];
@@ -161,50 +196,48 @@
                     const timestamp = (typeof vote === 'object') ? vote.t : vote;
                     const isUsed = (typeof vote === 'object') ? vote.used : false;
 
-                    if (now - timestamp < timeLimit) {
-                        if (!isUsed) validJudges.push(jId);
-                    } else {
-                        // Tự động xóa phiếu sau 3 giây để sạch DB
-                        db.child(`votes/${group}/${jId}`).remove();
+                    // Chỉ lấy phiếu trong 3 giây và chưa dùng
+                    if (now - timestamp <= timeLimit && !isUsed) {
+                        validJudges.push({id: jId, t: timestamp});
                     }
                 });
 
-                // Nếu có từ 2 người trở lên cùng bấm và chưa được tính điểm
                 if (validJudges.length >= 2) {
                     const teamKey = group.includes('red') ? 'redScore' : 'blueScore';
                     const points = group.includes('_p1') ? 1 : 2;
                     
-                    // 1. Cộng điểm thật
-                    db.child(teamKey).set((state[teamKey] || 0) + points);
+                    // Tính điểm dự kiến (cộng dồn nếu có nhiều update cùng lúc)
+                    const currentVal = (state[teamKey] || 0) + ((updates[teamKey] !== undefined) ? (updates[teamKey] - state[teamKey]) : 0);
+                    updates[teamKey] = currentVal + points;
 
-                    // 2. Đánh dấu các phiếu này đã dùng (KHÔNG XÓA để đèn vẫn sáng đủ 3s)
-                    validJudges.forEach(jId => {
-                        const originalTS = (typeof groupVotes[jId] === 'object') ? groupVotes[jId].t : groupVotes[jId];
-                        db.child(`votes/${group}/${jId}`).set({
-                            t: originalTS,
-                            used: true
-                        });
+                    // Đánh dấu phiếu đã dùng ngay lập tức
+                    validJudges.forEach(j => {
+                        updates[`votes/${group}/${j.id}/used`] = true;
                     });
+                    hasUpdates = true;
                 }
             });
+
+            if (hasUpdates) {
+                db.update(updates).catch(err => console.error("Lỗi cập nhật điểm:", err));
+            }
         }
 
         function handleTimerEnd() {
             if (state.round === 1 && !state.isBreak) {
-                state.isBreak = true; state.timer = 45; state.isRunning = true; 
+                db.update({ isBreak: true, timer: 45, isRunning: true });
             } else if (state.isBreak) {
-                state.isBreak = false; state.round = 2; state.timer = 90; state.isRunning = false; 
+                db.update({ isBreak: false, round: 2, timer: 90, isRunning: false });
             } else {
-                state.isRunning = false;
+                db.update({ isRunning: false });
             }
-            db.set(state);
         }
 
         function render() {
             document.getElementById('red-score').innerText = state.redScore || 0;
             document.getElementById('blue-score').innerText = state.blueScore || 0;
             document.getElementById('timer-display').innerText = formatTime(state.timer);
-            document.getElementById('round-label').innerText = state.isBreak ? "BREAK TIME" : `ROUND ${state.round}`;
+            document.getElementById('round-label').innerText = state.isBreak ? "NGHỈ GIỮA HIỆP" : `HIỆP ${state.round}`;
             
             document.getElementById('red-remind').innerText = state.redFouls?.remind || 0;
             document.getElementById('red-warned').innerText = state.redFouls?.warned || 0;
@@ -219,15 +252,12 @@
                     const el = document.getElementById(`rf-${side}-${i}`);
                     if (!el) return;
                     el.className = "rf-indicator"; 
-                    
-                    // Kiểm tra cả 2 loại điểm để sáng đèn
                     [1, 2].forEach(p => {
-                        const vote = state.votes[`${side}_p${p}`] ? state.votes[`${side}_p${p}`][i] : null;
+                        const voteKey = `${side}_p${p}`;
+                        const vote = state.votes[voteKey] ? state.votes[voteKey][i] : null;
                         if (vote) {
                             const ts = (typeof vote === 'object') ? vote.t : vote;
-                            if (now - ts < 3000) {
-                                el.classList.add(p === 1 ? 'rf-active-1' : 'rf-active-2');
-                            }
+                            if (now - ts < 3000) el.classList.add(p === 1 ? 'rf-active-1' : 'rf-active-2');
                         }
                     });
                 });
@@ -240,61 +270,85 @@
         }
 
         function toggleFullScreen() {
-            const doc = window.document;
-            const docEl = doc.documentElement;
-            const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-            const cancel = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-
-            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-                request.call(docEl);
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(e => console.log(e));
             } else {
-                cancel.call(doc);
+                document.exitFullscreen();
             }
         }
 
         if (!isMobile) {
             setInterval(() => {
-                if (state.isRunning && state.timer > 0) db.child('timer').set(state.timer - 1);
-                else if (state.isRunning && state.timer === 0) handleTimerEnd();
+                if (isMaster && state.isRunning && state.timer > 0) {
+                    db.child('timer').set(state.timer - 1);
+                } else if (isMaster && state.isRunning && state.timer === 0) {
+                    handleTimerEnd();
+                }
             }, 1000);
-            setInterval(render, 500);
+            setInterval(render, 200); 
         }
 
+        // --- LOGIC TRỪ ĐIỂM TỰ ĐỘNG ---
         function updateFoul(team, type, isDecrease) {
-            let fouls = team === 'red' ? state.redFouls : state.blueFouls;
-            if (!fouls) fouls = {remind:0, warned:0, medical:0};
-            if (isDecrease) fouls[type] = Math.max(0, fouls[type] - 1);
-            else {
+            let updates = {};
+            let fouls = team === 'red' ? {...(state.redFouls || {remind:0,warned:0,medical:0})} : {...(state.blueFouls || {remind:0,warned:0,medical:0})};
+            let currentScore = team === 'red' ? (state.redScore || 0) : (state.blueScore || 0);
+            
+            if (isDecrease) {
+                fouls[type] = Math.max(0, fouls[type] - 1);
+            } else {
                 if (type === 'remind') {
                     fouls.remind++;
-                    if (fouls.remind >= 3) { fouls.warned++; fouls.remind = 0; }
-                } else fouls[type]++;
+                    // 3 Nhắc nhở -> 1 Cảnh cáo -> Trừ 1 điểm
+                    if (fouls.remind >= 3) {
+                        fouls.warned++;
+                        fouls.remind = 0;
+                        updates[`${team}Score`] = Math.max(0, currentScore - 1);
+                    }
+                } else if (type === 'warned') {
+                    // Cảnh cáo -> Trừ 1 điểm
+                    fouls.warned++;
+                    updates[`${team}Score`] = Math.max(0, currentScore - 1);
+                } else {
+                    fouls[type]++;
+                }
             }
-            db.child(team + 'Fouls').set(fouls);
+            
+            updates[`${team}Fouls`] = fouls;
+            db.update(updates);
         }
 
         document.addEventListener('keydown', (e) => {
             const blockedKeys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
-            if (blockedKeys.includes(e.key) || (e.ctrlKey && ['R','S','P','F'].includes(e.key.toUpperCase()))) e.preventDefault();
+            if (blockedKeys.includes(e.key)) e.preventDefault();
 
             const isCtrl = e.ctrlKey; const isAlt = e.altKey; const key = e.key.toUpperCase();
-            if (e.key === 'F1') db.child('isRunning').set(!state.isRunning);
+            
+            if (e.key === 'F1') db.update({isRunning: !state.isRunning});
             if (e.key === 'F2') db.child('redScore').set((state.redScore || 0) + 1);
             if (e.key === 'F3') db.child('redScore').set(Math.max(0, (state.redScore || 0) - 1));
             if (e.key === 'F4') db.child('blueScore').set((state.blueScore || 0) + 1);
             if (e.key === 'F5') db.child('blueScore').set(Math.max(0, (state.blueScore || 0) - 1));
+            
             if (e.key === 'F6') {
-                if(confirm("Reset?")) db.set({
-                    redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
-                    active_judges:0, votes:{}, redFouls:{remind:0,warned:0,medical:0}, blueFouls:{remind:0,warned:0,medical:0}
-                });
+                if(confirm("RESET TRẬN ĐẤU?")) {
+                    db.set({
+                        redScore:0, blueScore:0, timer:90, isRunning:false, round:1, isBreak:false,
+                        active_judges:0, votes:{}, 
+                        redFouls:{remind:0,warned:0,medical:0}, 
+                        blueFouls:{remind:0,warned:0,medical:0},
+                        master_node: Date.now()
+                    });
+                }
             }
             if (e.key === 'F11') toggleFullScreen();
 
-            const team = isCtrl ? 'blue' : 'red';
-            if (key === 'R') updateFoul(team, 'remind', isAlt);
-            if (key === 'W') updateFoul(team, 'warned', isAlt);
-            if (key === 'M') updateFoul(team, 'medical', isAlt);
+            // Phím tắt: Không Ctrl -> Đỏ, Có Ctrl -> Xanh
+            const targetTeam = isCtrl ? 'blue' : 'red';
+            
+            if (key === 'R') updateFoul(targetTeam, 'remind', isAlt);
+            if (key === 'W') updateFoul(targetTeam, 'warned', isAlt);
+            if (key === 'M') updateFoul(targetTeam, 'medical', isAlt);
         });
     </script>
 </body>
